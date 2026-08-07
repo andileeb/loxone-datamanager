@@ -40,10 +40,23 @@ Release: push a `v*` tag → `.github/workflows/release.yml` builds macOS univer
 - `src/preload/index.ts` — contextBridge exposing `window.api`, typed by the
   single contract interface in `src/shared/api.ts` (preload implements it,
   renderer consumes it — extend the interface first when adding IPC).
-- `src/shared/` — types + `time.ts` (Loxone epoch helpers) used by both sides.
-- `src/renderer/src/` — Vue 3 + Pinia + PrimeVue 4 + uPlot. Views: Connection →
-  Browser (file list w/ sync status) → Editor (chart + virtualized grid +
-  problems panel). Router guard: everything except `/connect` needs a connection.
+- `src/shared/` — types + `time.ts` (Loxone epoch helpers, multi-format
+  timestamp parsing) used by both sides.
+- `src/renderer/src/` — Vue 3 + Pinia + PrimeVue 4 + uPlot + vue-i18n. Views:
+  Connection → Browser (file list w/ sync status) → Editor (chart + virtualized
+  grid + problems panel), plus Settings (Cmd/Ctrl+, or gear icon). Router guard:
+  everything except `/connect` and `/settings` needs a connection.
+- **i18n**: en + de catalogs in `renderer/src/locales/` (`de.ts` is typed
+  `typeof en` so missing keys fail typecheck). ALL user-facing strings go
+  through `t()`; error codes map to `errors.*` keys via `errorText()` in
+  `i18n.ts`; validation problems translate by `rule` code in ProblemsPanel.
+  Main-process messages stay English (fallback only).
+- **Prefs** (`renderer/src/prefs.ts`, localStorage): date format (default
+  DD.MM.YYYY) + time format (default 24h for every language — never let a
+  locale silently switch to AM/PM). Editor-grid timestamps always render 24h so
+  they stay parseable; `displayToLox` accepts all three date formats by
+  separator. Theme lives in `renderer/src/theme.ts` (`.app-dark` class =
+  PrimeVue darkModeSelector; chart palette watches `isDark`).
 
 ## Domain knowledge (hard-won, don't rediscover)
 
@@ -100,4 +113,5 @@ Release: push a `v*` tag → `.github/workflows/release.yml` builds macOS univer
 
 CSV import · resampling · old→new meter conversion · multi-month stitched
 charts · token-API read-only mode (statisticV2 meters, no FTP) · signed builds +
-auto-update (needs Apple Developer ID) · MCP integration.
+auto-update (needs Apple Developer ID) · MCP integration · CSV export honoring
+the date/time prefs (currently fixed ISO).

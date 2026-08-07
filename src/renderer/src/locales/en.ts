@@ -1,0 +1,145 @@
+export default {
+  connect: {
+    title: 'Loxone DataManager',
+    subtitle: 'Connect to your Miniserver to view and edit statistics',
+    savedConnections: 'Saved connections',
+    host: 'Host',
+    port: 'Port',
+    user: 'User',
+    password: 'Password',
+    encryption: 'Encryption',
+    tlsAuto: 'Auto-detect',
+    tlsFtps: 'FTPS (TLS)',
+    tlsPlain: 'Plain FTP',
+    saveConnection: 'Save connection',
+    namePlaceholder: 'Name (optional)',
+    connect: 'Connect',
+    ftpHint:
+      '<b>Is FTP enabled on your Miniserver?</b> Since firmware 16.1 the FTP server is disabled by default. In Loxone Config, open your Miniserver\'s network settings and set FTP to "Enabled" or "Enabled – TLS only", then save to the Miniserver and try again.'
+  },
+  browser: {
+    filterPlaceholder: 'Filter files…',
+    allMonths: 'All months',
+    downloadSelected: 'Download {n} selected',
+    uploadSelected: 'Upload {n} selected',
+    backup: 'Backup',
+    disconnect: 'Disconnect',
+    colFile: 'File',
+    colDescription: 'Description',
+    colMonth: 'Month',
+    colSize: 'Size',
+    colModified: 'Modified',
+    colStatus: 'Status',
+    unknown: 'unknown',
+    unknownTooltip:
+      "No stat name found in this control's file headers yet — its files may be empty or their download failed. Refreshing retries other months.",
+    empty: 'No statistics files found in /stats.',
+    tipRefresh: 'Refresh file list',
+    tipOpenFolder: 'Open local download folder',
+    tipBackup: 'Download all stats from the Miniserver into a zip file',
+    tipDownload: 'Download to this computer',
+    tipOpen: 'Open chart & editor',
+    tipUpload: 'Upload local copy to the Miniserver',
+    tipDelete: 'Delete from the Miniserver',
+    tipLanguage: 'Language',
+    tipTheme: 'Switch between light and dark mode',
+    deleteTitle: 'Delete from Miniserver?',
+    deleteBody:
+      'This permanently deletes the file from the Miniserver (a local copy, if any, is kept):',
+    deleteConfirm: 'Delete',
+    cancel: 'Cancel'
+  },
+  status: {
+    'only-remote': 'Not downloaded',
+    'only-local': 'Only local',
+    same: 'Downloaded',
+    'remote-newer': 'Newer on Miniserver',
+    'local-newer': 'Local changes'
+  },
+  suffix: {
+    power: 'power',
+    meterReading: 'meter reading',
+    storageLevel: 'storage level',
+    output: 'output {n}'
+  },
+  editor: {
+    back: 'Back to file list',
+    meta: '{entries} entries · {values} value(s)',
+    errors: '{n} errors',
+    warnings: '{n} warnings',
+    exportCsv: 'Export CSV',
+    save: 'Save',
+    upload: 'Upload to Miniserver',
+    insertAbove: 'Insert above',
+    insertBelow: 'Insert below',
+    delete: 'Delete',
+    deleteN: 'Delete {n}',
+    fillGaps: 'Fill gaps',
+    calculate: 'Calculate…',
+    timestamp: 'Timestamp',
+    value: 'Value {n}',
+    problems: 'Problems',
+    noProblems: 'No problems found',
+    currentMonthWarning:
+      "This is the <b>current month's</b> file — the Miniserver is still appending to it. Uploading an edited copy can lose the entries recorded in the meantime.",
+    exportedTo: 'Exported to {path}',
+    gapsFilled: 'Inserted {n} interpolated entries into gaps',
+    noGaps: 'No gaps found at the detected recording interval',
+    uploadConfirmTitle: 'Upload to Miniserver?',
+    uploadConfirmBody:
+      'This overwrites {file} on the Miniserver with your edited copy. There is no undo — consider keeping a downloaded backup.',
+    uploadConfirm: 'Upload',
+    postUploadTitle: 'Uploaded — two steps left',
+    postUploadIntro: 'The Miniserver only picks up edited statistics after:',
+    postUploadStep1: '<b>Restart the Miniserver</b> (Loxone Config or power cycle).',
+    postUploadStep2:
+      '<b>Clear the Loxone app cache</b> (or remove and re-add the Miniserver in the app) so cached statistics are refreshed.',
+    gotIt: 'Got it'
+  },
+  formula: {
+    title: 'Calculate values',
+    label: 'Formula (v = current value)',
+    invalid: 'Invalid formula — use numbers, v, + - * / ( )',
+    applyTo: 'Apply to column',
+    allValues: 'All values',
+    rows: 'Rows',
+    rowsSelected: 'Selected rows',
+    rowsDownwards: 'First selected row and below',
+    rowsAll: 'All rows',
+    apply: 'Apply',
+    cancel: 'Cancel'
+  },
+  problem: {
+    'uuid-mismatch': 'Entry UUID does not match the file name',
+    'timestamp-order': 'Timestamp is not after the previous entry',
+    'timestamp-outside-month-mid': "Timestamp lies outside the file's month",
+    'timestamp-outside-month-last': 'Last entry lies outside the month (allowed for interpolation)',
+    'invalid-value': 'Entry contains NaN/Infinity or a wrong number of values',
+    'bad-header': 'Invalid file header'
+  },
+  chart: {
+    resetZoom: 'Reset zoom',
+    resetZoomTip: 'Double-clicking the chart also resets the zoom',
+    value: 'Value {n}'
+  },
+  settings: {
+    title: 'Settings',
+    language: 'Language',
+    theme: 'Appearance',
+    themeLight: 'Light',
+    themeDark: 'Dark',
+    dateFormat: 'Date format',
+    timeFormat: 'Time format',
+    time24: '24-hour',
+    time12: '12-hour (AM/PM)',
+    example: 'Example: {example}',
+    shortcutHint: 'Open these settings anytime with Cmd+, (macOS) or Ctrl+, (Windows).'
+  },
+  errors: {
+    FTP_REFUSED: 'Connection refused — the Miniserver did not accept the FTP connection',
+    FTP_AUTH_FAILED: 'Login failed — check user and password',
+    FTP_TIMEOUT: 'The connection to the Miniserver timed out',
+    FTP_NOT_CONNECTED: 'Not connected to a Miniserver',
+    NO_PASSWORD: 'No stored password — enter it manually'
+  }
+}

@@ -1,8 +1,18 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import type { Problem } from '../../../shared/types'
 
 defineProps<{ problems: Problem[] }>()
 defineEmits<{ goto: [row: number] }>()
+const { t, te } = useI18n()
+
+function text(p: Problem): string {
+  if (p.rule === 'timestamp-outside-month') {
+    const isLast = p.severity === 'warning'
+    return t(`problem.timestamp-outside-month-${isLast ? 'last' : 'mid'}`)
+  }
+  return te(`problem.${p.rule}`) ? t(`problem.${p.rule}`) : p.message
+}
 </script>
 
 <template>
@@ -17,9 +27,11 @@ defineEmits<{ goto: [row: number] }>()
     >
       <i :class="p.severity === 'error' ? 'pi pi-times-circle' : 'pi pi-exclamation-triangle'" />
       <span v-if="p.row !== null" class="row">#{{ p.row + 1 }}</span>
-      <span>{{ p.message }}</span>
+      <span>{{ text(p) }}</span>
     </div>
-    <div v-if="!problems.length" class="ok"><i class="pi pi-check-circle" /> No problems found</div>
+    <div v-if="!problems.length" class="ok">
+      <i class="pi pi-check-circle" /> {{ t('editor.noProblems') }}
+    </div>
   </div>
 </template>
 

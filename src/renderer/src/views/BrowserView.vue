@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import Button from 'primevue/button'
 import Column from 'primevue/column'
 import DataTable from 'primevue/datatable'
@@ -10,13 +11,18 @@ import Message from 'primevue/message'
 import ProgressBar from 'primevue/progressbar'
 import Select from 'primevue/select'
 import Tag from 'primevue/tag'
+import AppControls from '../components/AppControls.vue'
 import { useConnectionStore } from '../stores/connection'
-import { suffixLabel, useFilesStore, type FileRow } from '../stores/files'
+import { SUFFIX_KEYS, useFilesStore, type FileRow } from '../stores/files'
 import type { SyncStatus } from '../../../shared/types'
+import { errorText } from '../i18n'
+import { formatDateTime } from '../prefs'
 
 const router = useRouter()
 const conn = useConnectionStore()
 const files = useFilesStore()
+const { t, locale } = useI18n()
+
 const filter = computed({
   get: () => files.listUi.filter,
   set: (v: string) => {
@@ -48,7 +54,7 @@ const rows = computed(() => {
 
 function formatMonthLong(yyyymm: string): string {
   return new Date(Number(yyyymm.slice(0, 4)), Number(yyyymm.slice(4)) - 1).toLocaleString(
-    undefined,
+    locale.value,
     { month: 'long', year: 'numeric' }
   )
 }
@@ -58,12 +64,18 @@ const monthOptions = computed(() => {
   return months.map((m) => ({ label: formatMonthLong(m), value: m }))
 })
 
-const STATUS_LABEL: Record<SyncStatus, { label: string; severity: string }> = {
-  'only-remote': { label: 'Not downloaded', severity: 'secondary' },
-  'only-local': { label: 'Only local', severity: 'contrast' },
-  same: { label: 'Downloaded', severity: 'success' },
-  'remote-newer': { label: 'Newer on Miniserver', severity: 'info' },
-  'local-newer': { label: 'Local changes', severity: 'warn' }
+const STATUS_SEVERITY: Record<SyncStatus, string> = {
+  'only-remote': 'secondary',
+  'only-local': 'contrast',
+  same: 'success',
+  'remote-newer': 'info',
+  'local-newer': 'warn'
+}
+
+function suffixText(suffix: number | null): string | null {
+  if (suffix === null) return null
+  const key = SUFFIX_KEYS[suffix]
+  return key ? t(`suffix.${key}`) : t('suffix.output', { n: suffix })
 }
 
 function formatMonth(yyyymm: string): string {
@@ -75,7 +87,7 @@ function formatSize(bytes: number): string {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`
 }
 function formatDate(iso: string | null): string {
-  return iso ? new Date(iso).toLocaleString() : '—'
+  return iso ? formatDateTime(new Date(iso)) : '—'
 }
 
 async function downloadOne(row: FileRow): Promise<void> {
@@ -171,35 +183,36 @@ onBeforeUnmount(() => {
           :value="conn.tlsMode === 'ftps' ? 'FTPS' : 'FTP'"
           :severity="conn.tlsMode === 'ftps' ? 'success' : 'warn'"
         />
+        <AppControls />
       </div>
       <div class="actions">
         <Button
           v-if="selection.length"
-          :label="`Download ${selection.length} selected`"
+          :label="t('browser.downloadSelected', { n: selection.length })"
           icon="pi pi-download"
           :disabled="!!files.transfer"
           @click="downloadSelected"
         />
         <Button
           v-if="uploadableSelected.length"
-          :label="`Upload ${uploadableSelected.length} selected`"
+          :label="t('browser.uploadSelected', { n: uploadableSelected.length })"
           icon="pi pi-cloud-upload"
           severity="warn"
           :disabled="!!files.transfer"
           @click="uploadSelected"
         />
-        <InputText v-model="filter" placeholder="Filter files…" />
+        <InputText v-model="filter" :placeholder="t('browser.filterPlaceholder')" />
         <Select
           v-model="monthFilter"
           :options="monthOptions"
           option-label="label"
           option-value="value"
-          placeholder="All months"
+          :placeholder="t('browser.allMonths')"
           show-clear
           class="month-select"
         />
         <Button
-          v-tooltip.bottom="'Refresh file list'"
+          v-tooltip.bottom="t('browser.tipRefresh')"
           icon="pi pi-refresh"
           severity="secondary"
           :loading="files.loading"
@@ -207,30 +220,31 @@ onBeforeUnmount(() => {
           @click="files.refresh()"
         />
         <Button
-          v-tooltip.bottom="'Open local download folder'"
+          v-tooltip.bottom="t('browser.tipOpenFolder')"
           icon="pi pi-folder-open"
           severity="secondary"
           aria-label="Open local folder"
           @click="openCacheFolder"
         />
         <Button
-          v-tooltip.bottom="'Download all stats from the Miniserver into a zip file'"
+          v-tooltip.bottom="t('browser.tipBackup')"
           icon="pi pi-file-export"
-          label="Backup"
+          :label="t('browser.backup')"
           severity="secondary"
           :disabled="!!files.transfer"
           @click="backup"
         />
-        <Button icon="pi pi-sign-out" label="Disconnect" severity="secondary" @click="disconnect" />
+        <Button
+          icon="pi pi-sign-out"
+          :label="t('browser.disconnect')"
+          severity="secondary"
+          @click="disconnect"
+        />
       </div>
     </div>
 
     <Message v-if="files.error" severity="error" :closable="false">
-      {{ files.error.message }}
-    </Message>
-
-    <Message v-if="backupPath" severity="success" closable @close="backupPath = null">
-      Backup saved to {{ backupPath }}
+      {{ errorText(files.error) }}
     </Message>
 
     <div v-if="files.transfer" class="transfer">
@@ -254,44 +268,41 @@ onBeforeUnmount(() => {
       class="table"
     >
       <Column selection-mode="multiple" header-style="width: 3rem" />
-      <Column field="name" header="File" sortable>
+      <Column field="name" :header="t('browser.colFile')" sortable>
         <template #body="{ data }">
           <span class="mono">{{ data.name }}</span>
         </template>
       </Column>
-      <Column field="description" header="Description" sortable>
+      <Column field="description" :header="t('browser.colDescription')" sortable>
         <template #body="{ data }">
           <span class="desc">
             <span v-if="data.description">{{ data.description }}</span>
-            <span
-              v-else
-              class="muted"
-              title="No stat name found in this control's file headers yet — its files may be empty or their download failed. Refreshing retries other months."
-              >unknown</span
-            >
+            <span v-else v-tooltip.right="t('browser.unknownTooltip')" class="muted">{{
+              t('browser.unknown')
+            }}</span>
             <Tag
-              v-if="suffixLabel(data.suffix)"
-              :value="suffixLabel(data.suffix)!"
+              v-if="suffixText(data.suffix)"
+              :value="suffixText(data.suffix)!"
               severity="secondary"
               class="suffix-tag"
             />
           </span>
         </template>
       </Column>
-      <Column field="yyyymm" header="Month" sortable>
+      <Column field="yyyymm" :header="t('browser.colMonth')" sortable>
         <template #body="{ data }">{{ formatMonth(data.yyyymm) }}</template>
       </Column>
-      <Column field="size" header="Size" sortable>
+      <Column field="size" :header="t('browser.colSize')" sortable>
         <template #body="{ data }">{{ formatSize(data.size) }}</template>
       </Column>
-      <Column field="modifiedAt" header="Modified" sortable>
+      <Column field="modifiedAt" :header="t('browser.colModified')" sortable>
         <template #body="{ data }">{{ formatDate(data.modifiedAt) }}</template>
       </Column>
-      <Column field="status" header="Status" sortable>
+      <Column field="status" :header="t('browser.colStatus')" sortable>
         <template #body="{ data }">
           <Tag
-            :value="STATUS_LABEL[data.status as SyncStatus].label"
-            :severity="STATUS_LABEL[data.status as SyncStatus].severity"
+            :value="t(`status.${data.status}`)"
+            :severity="STATUS_SEVERITY[data.status as SyncStatus]"
           />
         </template>
       </Column>
@@ -299,7 +310,7 @@ onBeforeUnmount(() => {
         <template #body="{ data }">
           <div class="row-actions">
             <Button
-              v-tooltip.left="'Download to this computer'"
+              v-tooltip.left="t('browser.tipDownload')"
               icon="pi pi-download"
               text
               severity="secondary"
@@ -309,7 +320,7 @@ onBeforeUnmount(() => {
               @click="downloadOne(data)"
             />
             <Button
-              v-tooltip.left="'Open chart & editor'"
+              v-tooltip.left="t('browser.tipOpen')"
               icon="pi pi-chart-line"
               text
               aria-label="Open"
@@ -317,7 +328,7 @@ onBeforeUnmount(() => {
               @click="openEditor(data)"
             />
             <Button
-              v-tooltip.left="'Upload local copy to the Miniserver'"
+              v-tooltip.left="t('browser.tipUpload')"
               icon="pi pi-cloud-upload"
               text
               severity="warn"
@@ -328,7 +339,7 @@ onBeforeUnmount(() => {
               @click="uploadOne(data)"
             />
             <Button
-              v-tooltip.left="'Delete from the Miniserver'"
+              v-tooltip.left="t('browser.tipDelete')"
               icon="pi pi-trash"
               text
               severity="danger"
@@ -340,43 +351,52 @@ onBeforeUnmount(() => {
         </template>
       </Column>
       <template #empty>
-        <span v-if="!files.loading">No statistics files found in /stats.</span>
+        <span v-if="!files.loading">{{ t('browser.empty') }}</span>
       </template>
     </DataTable>
 
     <Dialog
       :visible="!!deleteTargets.length"
-      header="Delete from Miniserver?"
+      :header="t('browser.deleteTitle')"
       modal
       :style="{ width: '28rem' }"
       @update:visible="deleteTargets = []"
     >
-      <p>This permanently deletes the file from the Miniserver (a local copy, if any, is kept):</p>
+      <p>{{ t('browser.deleteBody') }}</p>
       <ul class="delete-list">
-        <li v-for="t in deleteTargets" :key="t.name" class="mono">{{ t.name }}</li>
+        <li v-for="target in deleteTargets" :key="target.name" class="mono">{{ target.name }}</li>
       </ul>
       <template #footer>
-        <Button label="Cancel" severity="secondary" text @click="deleteTargets = []" />
-        <Button label="Delete" icon="pi pi-trash" severity="danger" @click="confirmDelete" />
+        <Button
+          :label="t('browser.cancel')"
+          severity="secondary"
+          text
+          @click="deleteTargets = []"
+        />
+        <Button
+          :label="t('browser.deleteConfirm')"
+          icon="pi pi-trash"
+          severity="danger"
+          @click="confirmDelete"
+        />
       </template>
     </Dialog>
 
     <Dialog
       v-model:visible="showPostUpload"
-      header="Uploaded — two steps left"
+      :header="t('editor.postUploadTitle')"
       modal
       :style="{ width: '28rem' }"
     >
-      <p>The Miniserver only picks up edited statistics after:</p>
+      <p>{{ t('editor.postUploadIntro') }}</p>
       <ol class="checklist">
-        <li><b>Restart the Miniserver</b> (Loxone Config or power cycle).</li>
-        <li>
-          <b>Clear the Loxone app cache</b> (or remove and re-add the Miniserver in the app) so
-          cached statistics are refreshed.
-        </li>
+        <!-- eslint-disable-next-line vue/no-v-html -->
+        <li v-html="t('editor.postUploadStep1')"></li>
+        <!-- eslint-disable-next-line vue/no-v-html -->
+        <li v-html="t('editor.postUploadStep2')"></li>
       </ol>
       <template #footer>
-        <Button label="Got it" @click="showPostUpload = false" />
+        <Button :label="t('editor.gotIt')" @click="showPostUpload = false" />
       </template>
     </Dialog>
   </main>
@@ -394,6 +414,9 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+}
+.lang-switch {
+  margin-left: 0.5rem;
 }
 .actions {
   display: flex;

@@ -18,10 +18,30 @@ export function loxToDisplay(ts: number): string {
   return `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}:${p(d.getUTCSeconds())}`
 }
 
-/** parse "YYYY-MM-DD HH:mm:ss" back to a Loxone timestamp; null when invalid */
+/**
+ * Parse an edited timestamp back to a Loxone timestamp; null when invalid.
+ * The separator disambiguates the date order: "YYYY-MM-DD", "DD.MM.YYYY",
+ * or "MM/DD/YYYY", each followed by " HH:mm(:ss)".
+ */
 export function displayToLox(text: string): number | null {
-  const m = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?$/.exec(text.trim())
-  if (!m) return null
-  const unix = Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], m[6] ? +m[6] : 0) / 1000
+  const t = text.trim()
+  let y: number, mo: number, d: number, rest: string
+  let m = /^(\d{4})-(\d{2})-(\d{2})[T ](.+)$/.exec(t)
+  if (m) {
+    ;[y, mo, d] = [+m[1], +m[2], +m[3]]
+    rest = m[4]
+  } else if ((m = /^(\d{1,2})\.(\d{1,2})\.(\d{4}) (.+)$/.exec(t))) {
+    ;[d, mo, y] = [+m[1], +m[2], +m[3]]
+    rest = m[4]
+  } else if ((m = /^(\d{1,2})\/(\d{1,2})\/(\d{4}) (.+)$/.exec(t))) {
+    ;[mo, d, y] = [+m[1], +m[2], +m[3]]
+    rest = m[4]
+  } else {
+    return null
+  }
+  const tm = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(rest.trim())
+  if (!tm) return null
+  if (mo < 1 || mo > 12 || d < 1 || d > 31 || +tm[1] > 23) return null
+  const unix = Date.UTC(y, mo - 1, d, +tm[1], +tm[2], tm[3] ? +tm[3] : 0) / 1000
   return unixSecToLox(unix)
 }

@@ -19,16 +19,11 @@ export interface FileRow {
   remote: RemoteFile | null
 }
 
-/** community-documented meaning of the _n meter-file suffixes */
-const SUFFIX_MEANING: Record<number, string> = {
+/** community-documented meaning of the _n meter-file suffixes (i18n keys under `suffix.`) */
+export const SUFFIX_KEYS: Record<number, string> = {
   1: 'power',
-  2: 'meter reading',
-  3: 'storage level'
-}
-
-export function suffixLabel(suffix: number | null): string | null {
-  if (suffix === null) return null
-  return SUFFIX_MEANING[suffix] ?? `output ${suffix}`
+  2: 'meterReading',
+  3: 'storageLevel'
 }
 
 function statusOf(remote: RemoteFile | undefined, cached: CachedFile | undefined): SyncStatus {

@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
 import RadioButton from 'primevue/radiobutton'
 import Select from 'primevue/select'
 import { compileFormula } from '../lib/formula'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   valueCount: number
@@ -25,8 +28,11 @@ const column = ref<number | 'all'>(props.valueCount > 1 ? 'all' : 0)
 const scope = ref<'selected' | 'downwards' | 'all'>(props.hasSelection ? 'selected' : 'all')
 
 const columnOptions = computed(() => [
-  ...(props.valueCount > 1 ? [{ label: 'All values', value: 'all' as const }] : []),
-  ...Array.from({ length: props.valueCount }, (_, i) => ({ label: `Value ${i + 1}`, value: i }))
+  ...(props.valueCount > 1 ? [{ label: t('formula.allValues'), value: 'all' as const }] : []),
+  ...Array.from({ length: props.valueCount }, (_, i) => ({
+    label: t('editor.value', { n: i + 1 }),
+    value: i
+  }))
 ])
 
 const compiled = computed(() => compileFormula(expression.value))
@@ -43,17 +49,17 @@ function apply(): void {
 </script>
 
 <template>
-  <Dialog v-model:visible="visible" header="Calculate values" modal :style="{ width: '26rem' }">
+  <Dialog v-model:visible="visible" :header="t('formula.title')" modal :style="{ width: '26rem' }">
     <div class="body">
-      <label>Formula (v = current value)</label>
+      <label>{{ t('formula.label') }}</label>
       <InputText v-model="expression" placeholder="v * 1000" :invalid="!compiled" autofocus />
       <small v-if="preview" class="preview">{{ preview }}</small>
-      <small v-else class="invalid">Invalid formula — use numbers, v, + - * / ( )</small>
+      <small v-else class="invalid">{{ t('formula.invalid') }}</small>
 
-      <label>Apply to column</label>
+      <label>{{ t('formula.applyTo') }}</label>
       <Select v-model="column" :options="columnOptions" option-label="label" option-value="value" />
 
-      <label>Rows</label>
+      <label>{{ t('formula.rows') }}</label>
       <div class="scopes">
         <div v-for="opt in ['selected', 'downwards', 'all'] as const" :key="opt" class="scope">
           <RadioButton
@@ -65,18 +71,18 @@ function apply(): void {
           <label :for="`scope-${opt}`">
             {{
               opt === 'selected'
-                ? 'Selected rows'
+                ? t('formula.rowsSelected')
                 : opt === 'downwards'
-                  ? 'First selected row and below'
-                  : 'All rows'
+                  ? t('formula.rowsDownwards')
+                  : t('formula.rowsAll')
             }}
           </label>
         </div>
       </div>
     </div>
     <template #footer>
-      <Button label="Cancel" severity="secondary" text @click="visible = false" />
-      <Button label="Apply" :disabled="!compiled" @click="apply" />
+      <Button :label="t('formula.cancel')" severity="secondary" text @click="visible = false" />
+      <Button :label="t('formula.apply')" :disabled="!compiled" @click="apply" />
     </template>
   </Dialog>
 </template>

@@ -1,10 +1,14 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import Button from 'primevue/button'
 import uPlot from 'uplot'
 import 'uplot/dist/uPlot.min.css'
 import type { StatRecord } from '../../../shared/types'
 import { loxToUnixSec } from '../../../shared/time'
+import { isDark } from '../theme'
+
+const { t, locale } = useI18n()
 
 const props = defineProps<{
   records: StatRecord[]
@@ -48,8 +52,7 @@ function resetZoom(): void {
 }
 
 function seriesColor(i: number): string {
-  const dark = window.matchMedia('(prefers-color-scheme: dark)').matches
-  const pal = dark ? DARK : LIGHT
+  const pal = isDark.value ? DARK : LIGHT
   // ponytail: stats with >8 outputs fold into gray — real files have 1-3
   return pal[i] ?? '#888888'
 }
@@ -95,7 +98,7 @@ function makePlot(): void {
     series: [
       {},
       ...Array.from({ length: props.valueCount }, (_, i) => ({
-        label: `Value ${i + 1}`,
+        label: t('chart.value', { n: i + 1 }),
         stroke: seriesColor(i),
         width: 2,
         points: { show: false }
@@ -151,6 +154,9 @@ watch(
     else plot.setData(buildData())
   }
 )
+
+// theme or language changed → colors and series labels must be rebuilt
+watch([isDark, locale], () => makePlot())
 </script>
 
 <template>
@@ -158,10 +164,10 @@ watch(
     <div ref="wrap" class="chart"></div>
     <Button
       v-if="zoomed"
-      v-tooltip.left="'Double-clicking the chart also resets the zoom'"
+      v-tooltip.left="t('chart.resetZoomTip')"
       class="reset-zoom"
       icon="pi pi-search-minus"
-      label="Reset zoom"
+      :label="t('chart.resetZoom')"
       size="small"
       severity="secondary"
       @click="resetZoom"

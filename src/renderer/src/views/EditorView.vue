@@ -11,13 +11,18 @@ import Tag from 'primevue/tag'
 import StatChart from '../components/StatChart.vue'
 import ProblemsPanel from '../components/ProblemsPanel.vue'
 import FormulaDialog from '../components/FormulaDialog.vue'
-import { displayToLox, loxToDisplay } from '../../../shared/time'
+import { displayToLox } from '../../../shared/time'
+import { LOXONE_EPOCH_OFFSET } from '../../../shared/types'
 import { useEditorStore } from '../stores/editor'
-import { suffixLabel } from '../stores/files'
+import { SUFFIX_KEYS } from '../stores/files'
+import { errorText } from '../i18n'
+import { loxToDisplayPref } from '../prefs'
+import { useI18n } from 'vue-i18n'
 
 const props = defineProps<{ filename: string }>()
 const router = useRouter()
 const editor = useEditorStore()
+const { t } = useI18n()
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const dt = ref<any>(null)
@@ -51,7 +56,9 @@ const warnCount = computed(
 
 const suffixText = computed(() => {
   const m = /_([1-9])\.\d{6}$/.exec(props.filename)
-  return suffixLabel(m ? Number(m[1]) : null)
+  if (!m) return null
+  const key = SUFFIX_KEYS[Number(m[1])]
+  return key ? t(`suffix.${key}`) : t('suffix.output', { n: Number(m[1]) })
 })
 
 const isCurrentMonth = computed(() => {
@@ -90,7 +97,7 @@ function commitTimestamp(row: Row, event: Event): void {
   if (ts !== null && ts >= 0) {
     editor.setTimestamp(row.index, ts)
   } else {
-    input.value = loxToDisplay(row.ts)
+    input.value = loxToDisplayPref(row.ts, LOXONE_EPOCH_OFFSET)
   }
 }
 
@@ -153,7 +160,7 @@ watch(
     <div class="toolbar">
       <div class="title">
         <Button
-          v-tooltip.bottom="'Back to file list'"
+          v-tooltip.bottom="t('editor.back')"
           icon="pi pi-arrow-left"
           text
           severity="secondary"
@@ -169,14 +176,18 @@ watch(
         </div>
       </div>
       <div class="actions">
-        <Tag v-if="errorCount" severity="danger" :value="`${errorCount} errors`" />
-        <Tag v-if="warnCount" severity="warn" :value="`${warnCount} warnings`" />
+        <Tag v-if="errorCount" severity="danger" :value="t('editor.errors', { n: errorCount })" />
+        <Tag v-if="warnCount" severity="warn" :value="t('editor.warnings', { n: warnCount })" />
         <span v-if="editor.data" class="meta">
-          {{ editor.data.records.length.toLocaleString() }} entries ·
-          {{ editor.data.valueCount }} value(s)
+          {{
+            t('editor.meta', {
+              entries: editor.data.records.length.toLocaleString(),
+              values: editor.data.valueCount
+            })
+          }}
         </span>
         <Button
-          label="Export CSV"
+          :label="t('editor.exportCsv')"
           icon="pi pi-file-export"
           severity="secondary"
           text
@@ -184,7 +195,7 @@ watch(
           @click="exportCsv"
         />
         <Button
-          label="Save"
+          :label="t('editor.save')"
           icon="pi pi-save"
           severity="secondary"
           :disabled="!editor.dirty"
@@ -192,7 +203,7 @@ watch(
           @click="editor.save()"
         />
         <Button
-          label="Upload to Miniserver"
+          :label="t('editor.upload')"
           icon="pi pi-cloud-upload"
           :disabled="!editor.data"
           :loading="editor.saving"
@@ -202,21 +213,17 @@ watch(
     </div>
 
     <Message v-if="isCurrentMonth" severity="warn" :closable="false">
-      This is the <b>current month's</b> file — the Miniserver is still appending to it. Uploading
-      an edited copy can lose the entries recorded in the meantime.
+      <!-- eslint-disable-next-line vue/no-v-html -->
+      <span v-html="t('editor.currentMonthWarning')"></span>
     </Message>
     <Message v-if="editor.error" severity="error" :closable="false">
-      {{ editor.error.message }}
+      {{ errorText(editor.error) }}
     </Message>
     <Message v-if="csvPath" severity="success" closable @close="csvPath = null">
-      Exported to {{ csvPath }}
+      {{ t('editor.exportedTo', { path: csvPath }) }}
     </Message>
     <Message v-if="fillResult !== null" severity="info" closable @close="fillResult = null">
-      {{
-        fillResult
-          ? `Inserted ${fillResult} interpolated entries into gaps`
-          : 'No gaps found at the detected recording interval'
-      }}
+      {{ fillResult ? t('editor.gapsFilled', { n: fillResult }) : t('editor.noGaps') }}
     </Message>
 
     <template v-if="editor.data">
@@ -229,7 +236,7 @@ watch(
 
       <div class="edit-bar">
         <Button
-          label="Insert above"
+          :label="t('editor.insertAbove')"
           icon="pi pi-arrow-up"
           size="small"
           severity="secondary"
@@ -237,7 +244,7 @@ watch(
           @click="insertRow('above')"
         />
         <Button
-          label="Insert below"
+          :label="t('editor.insertBelow')"
           icon="pi pi-arrow-down"
           size="small"
           severity="secondary"
@@ -245,7 +252,9 @@ watch(
           @click="insertRow('below')"
         />
         <Button
-          :label="`Delete${selection.length ? ` ${selection.length}` : ''}`"
+          :label="
+            selection.length ? t('editor.deleteN', { n: selection.length }) : t('editor.delete')
+          "
           icon="pi pi-trash"
           size="small"
           severity="danger"
@@ -255,14 +264,14 @@ watch(
         />
         <span class="spacer" />
         <Button
-          label="Fill gaps"
+          :label="t('editor.fillGaps')"
           icon="pi pi-arrows-h"
           size="small"
           severity="secondary"
           @click="fillGaps"
         />
         <Button
-          label="Calculate…"
+          :label="t('editor.calculate')"
           icon="pi pi-calculator"
           size="small"
           severity="secondary"
@@ -289,17 +298,21 @@ watch(
               <span class="mono muted">{{ data.index + 1 }}</span>
             </template>
           </Column>
-          <Column field="ts" header="Timestamp" style="width: 15rem">
+          <Column field="ts" :header="t('editor.timestamp')" style="width: 15rem">
             <template #body="{ data }">
               <InputText
-                :model-value="loxToDisplay(data.ts)"
+                :model-value="loxToDisplayPref(data.ts, LOXONE_EPOCH_OFFSET)"
                 class="cell-input mono"
                 @change="commitTimestamp(data, $event)"
                 @keyup.enter="($event.target as HTMLInputElement).blur()"
               />
             </template>
           </Column>
-          <Column v-for="v in editor.data.valueCount" :key="v" :header="`Value ${v}`">
+          <Column
+            v-for="v in editor.data.valueCount"
+            :key="v"
+            :header="t('editor.value', { n: v })"
+          >
             <template #body="{ data }">
               <InputText
                 :model-value="String(data.values[v - 1])"
@@ -312,7 +325,7 @@ watch(
         </DataTable>
 
         <aside class="side">
-          <h3>Problems</h3>
+          <h3>{{ t('editor.problems') }}</h3>
           <ProblemsPanel :problems="editor.data.problems" @goto="gotoRow" />
         </aside>
       </div>
@@ -326,36 +339,37 @@ watch(
 
       <Dialog
         v-model:visible="showUploadConfirm"
-        header="Upload to Miniserver?"
+        :header="t('editor.uploadConfirmTitle')"
         modal
         :style="{ width: '28rem' }"
       >
-        <p>
-          This overwrites <span class="mono">{{ filename }}</span> on the Miniserver with your
-          edited copy. There is no undo — consider keeping a downloaded backup.
-        </p>
+        <p>{{ t('editor.uploadConfirmBody', { file: filename }) }}</p>
         <template #footer>
-          <Button label="Cancel" severity="secondary" text @click="showUploadConfirm = false" />
-          <Button label="Upload" icon="pi pi-cloud-upload" @click="upload" />
+          <Button
+            :label="t('formula.cancel')"
+            severity="secondary"
+            text
+            @click="showUploadConfirm = false"
+          />
+          <Button :label="t('editor.uploadConfirm')" icon="pi pi-cloud-upload" @click="upload" />
         </template>
       </Dialog>
 
       <Dialog
         v-model:visible="showPostUpload"
-        header="Uploaded — two steps left"
+        :header="t('editor.postUploadTitle')"
         modal
         :style="{ width: '28rem' }"
       >
-        <p>The Miniserver only picks up edited statistics after:</p>
+        <p>{{ t('editor.postUploadIntro') }}</p>
         <ol class="checklist">
-          <li><b>Restart the Miniserver</b> (Loxone Config or power cycle).</li>
-          <li>
-            <b>Clear the Loxone app cache</b> (or remove and re-add the Miniserver in the app) so
-            cached statistics are refreshed.
-          </li>
+          <!-- eslint-disable-next-line vue/no-v-html -->
+          <li v-html="t('editor.postUploadStep1')"></li>
+          <!-- eslint-disable-next-line vue/no-v-html -->
+          <li v-html="t('editor.postUploadStep2')"></li>
         </ol>
         <template #footer>
-          <Button label="Got it" @click="showPostUpload = false" />
+          <Button :label="t('editor.gotIt')" @click="showPostUpload = false" />
         </template>
       </Dialog>
     </template>

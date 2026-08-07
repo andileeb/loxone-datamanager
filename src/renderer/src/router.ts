@@ -7,13 +7,14 @@ const router = createRouter({
   routes: [
     { path: '/', redirect: '/connect' },
     { path: '/connect', component: ConnectionView },
+    { path: '/settings', component: () => import('./views/SettingsView.vue') },
     { path: '/browser', component: () => import('./views/BrowserView.vue') },
     { path: '/editor/:filename', component: () => import('./views/EditorView.vue'), props: true }
   ]
 })
 
 router.beforeEach((to) => {
-  if (to.path === '/connect') return true
+  if (to.path === '/connect' || to.path === '/settings') return true
   const conn = useConnectionStore()
   if (conn.status !== 'connected') return '/connect'
   return true
