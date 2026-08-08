@@ -14,6 +14,8 @@ interface Session {
 }
 
 let session: Session | null = null
+/** client of an in-flight open(); doubles as the cancel token — disconnect() nulls it */
+let pending: Client | null = null
 let queue: Promise<unknown> = Promise.resolve()
 
 export class NotConnectedError extends Error {
@@ -32,6 +34,7 @@ async function open(args: ConnectPayload): Promise<Session> {
   let lastErr: unknown
   for (const mode of attempts) {
     const client = new Client(TIMEOUT_MS)
+    pending = client
     try {
       await client.access({
         host: args.host,
@@ -42,9 +45,12 @@ async function open(args: ConnectPayload): Promise<Session> {
         // Miniserver TLS certs are self-signed / hostname-mismatched on the LAN
         secureOptions: { rejectUnauthorized: false }
       })
+      pending = null
       return { client, args, tlsMode: mode }
     } catch (e) {
       client.close()
+      if (pending !== client) throw e // cancelled from outside — don't try the next mode
+      pending = null
       lastErr = e
       if (isAuthError(e)) throw e // wrong credentials — retrying without TLS won't help
     }
@@ -60,6 +66,8 @@ export async function connect(args: ConnectPayload): Promise<TlsMode> {
 }
 
 export function disconnect(): null {
+  pending?.close() // aborts a connect attempt still in flight
+  pending = null
   session?.client.close()
   session = null
   return null

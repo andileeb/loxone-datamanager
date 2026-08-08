@@ -16,6 +16,7 @@ const de: typeof en = {
     saveConnection: 'Verbindung speichern',
     namePlaceholder: 'Name (optional)',
     connect: 'Verbinden',
+    cancel: 'Verbindungsversuch abbrechen',
     ftpHint:
       '<b>Ist FTP am Miniserver aktiviert?</b> Seit Firmware 16.1 ist der FTP-Server standardmäßig deaktiviert. In Loxone Config in den Netzwerkeinstellungen des Miniservers FTP auf „Aktiviert" oder „Aktiviert – nur TLS" stellen, in den Miniserver speichern und erneut versuchen.'
   },

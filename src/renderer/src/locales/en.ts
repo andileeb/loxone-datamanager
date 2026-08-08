@@ -14,6 +14,7 @@ export default {
     saveConnection: 'Save connection',
     namePlaceholder: 'Name (optional)',
     connect: 'Connect',
+    cancel: 'Cancel connection attempt',
     ftpHint:
       '<b>Is FTP enabled on your Miniserver?</b> Since firmware 16.1 the FTP server is disabled by default. In Loxone Config, open your Miniserver\'s network settings and set FTP to "Enabled" or "Enabled – TLS only", then save to the Miniserver and try again.'
   },

@@ -35,21 +35,44 @@ const tlsOptions = computed(() => [
 ])
 
 const busy = ref(false)
+const slow = ref(false) // attempt has been running > 2s → offer to cancel
+const cancelled = ref(false)
+
+async function withBusy<T>(fn: () => Promise<T>): Promise<T> {
+  busy.value = true
+  cancelled.value = false
+  const timer = setTimeout(() => (slow.value = true), 2000)
+  try {
+    return await fn()
+  } finally {
+    clearTimeout(timer)
+    busy.value = false
+    slow.value = false
+    if (cancelled.value) {
+      conn.error = null // the failure was self-inflicted, don't alarm the user
+      await conn.disconnect() // in case cancel raced a connect that just succeeded
+    }
+  }
+}
+
+async function cancel(): Promise<void> {
+  cancelled.value = true
+  await conn.disconnect() // closes the pending client in main → connect() rejects
+}
 
 async function submit(): Promise<void> {
-  busy.value = true
-  const ok = await conn.connect(
-    { host: form.host, port: form.port, user: form.user, password: form.password, tls: form.tls },
-    form.save ? form.name || form.host : undefined
+  const ok = await withBusy(() =>
+    conn.connect(
+      { host: form.host, port: form.port, user: form.user, password: form.password, tls: form.tls },
+      form.save ? form.name || form.host : undefined
+    )
   )
-  busy.value = false
-  if (ok) router.push('/browser')
+  if (ok && !cancelled.value) router.push('/browser')
 }
 
 async function useSaved(meta: ConnMeta): Promise<void> {
-  busy.value = true
-  const result = await conn.connectSaved(meta)
-  busy.value = false
+  const result = await withBusy(() => conn.connectSaved(meta))
+  if (cancelled.value) return
   if (result === true) {
     router.push('/browser')
   } else if (result === 'needs-password') {
@@ -131,12 +154,25 @@ onMounted(() => conn.loadSaved())
             />
           </div>
         </div>
-        <Button
-          type="submit"
-          :label="t('connect.connect')"
-          icon="pi pi-arrow-right"
-          :loading="busy || conn.status === 'connecting'"
-        />
+        <div class="actions">
+          <Button
+            type="submit"
+            :label="t('connect.connect')"
+            icon="pi pi-arrow-right"
+            :loading="busy || conn.status === 'connecting'"
+          />
+          <Button
+            v-tooltip="t('connect.cancel')"
+            type="button"
+            class="cancel"
+            :class="{ show: slow }"
+            icon="pi pi-times"
+            severity="danger"
+            text
+            :aria-label="t('connect.cancel')"
+            @click="cancel"
+          />
+        </div>
       </form>
 
       <Message v-if="conn.error" severity="error" :closable="false">
@@ -188,6 +224,28 @@ onMounted(() => conn.loadSaved())
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+}
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.actions :deep(.p-button[type='submit']) {
+  flex: 1;
+}
+/* collapsed until slow — the connect button (flex:1) shrinks as this grows */
+.cancel {
+  overflow: hidden;
+  transition:
+    width 0.2s,
+    padding 0.2s,
+    opacity 0.2s;
+}
+.cancel:not(.show) {
+  width: 0;
+  padding: 0;
+  opacity: 0;
+  visibility: hidden;
 }
 .row {
   display: grid;

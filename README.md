@@ -3,7 +3,7 @@
 A modern, cross-platform viewer and editor for **Loxone Miniserver statistics** —
 heavily inspired by [LoxStatEdit](https://github.com/mr-manuel/Loxone_LoxStatEdit).
 
-[<img src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=&slug=andileeb&button_colour=FFDD00&font_colour=000000&font_family=Lato&outline_colour=000000&coffee_colour=ffffff" alt="Buy me a coffee" height="40">](https://www.buymeacoffee.com/andileeb)
+<a href="https://www.buymeacoffee.com/andileeb"><img src="https://img.buymeacoffee.com/button-api/?text=Buy%20me%20a%20coffee&emoji=&slug=andileeb&button_colour=FFDD00&font_colour=000000&font_family=Lato&outline_colour=000000&coffee_colour=ffffff" alt="Buy me a coffee" height="40"></a>
 
 Browse the statistics stored on your Miniserver's SD card, chart them, fix broken
 entries (spikes, gaps, wrong meter readings), and upload the corrected files back —
