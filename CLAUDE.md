@@ -95,8 +95,11 @@ Release: push a `v*` tag → `.github/workflows/release.yml` builds macOS univer
   `resolveHost()` in ftp.ts takes only the hostname — the port is the *web* port,
   FTP keeps the port from the form. Both host and port change over time, so resolve
   per connect (inside `open()`), never at save time. Reaching FTP that way still
-  needs port 21 + the passive range forwarded; Loxone remote connect forwards
-  neither.
+  needs port 21 + the passive range forwarded, so it only works when the entry
+  points at the user's **own** IP. With **Loxone Remote Connect** the entry points
+  at a Loxone relay (measured: Hetzner CLOUD-NBG1, IP *and* port change between
+  lookups, only the announced web port open) which proxies HTTP(S) only — FTP is
+  unreachable there by design, no router change helps. VPN is the only remote path.
 - After upload the Miniserver must be **restarted** + Loxone app cache cleared —
   the UI shows this checklist; keep it.
 - Current-month files are still being appended by the Miniserver → editor warns.

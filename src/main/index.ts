@@ -5,6 +5,13 @@ import icon from '../../resources/icon.png?asset'
 import { registerIpc } from './ipc'
 import * as mcp from './mcp'
 
+// The macOS app menu, About panel and Quit item all read app.name, which otherwise
+// falls back to package.json "name" — the slug. app.name also derives userData, so
+// pin that to the directory already in use BEFORE renaming, or saved connections,
+// the MCP token and the stats cache silently move and look wiped.
+app.setPath('userData', join(app.getPath('appData'), 'loxone-datamanager'))
+app.setName('Loxone DataManager')
+
 function createWindow(): void {
   // Create the browser window.
   const mainWindow = new BrowserWindow({

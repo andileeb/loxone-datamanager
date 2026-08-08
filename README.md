@@ -51,15 +51,35 @@ Connect with a Miniserver **admin** user.
 
 ### Connecting remotely
 
-The host field also accepts a Loxone Cloud DNS address —
-`dns.loxonecloud.com/<serial>`, where `<serial>` is your Miniserver's serial number
-(its MAC without separators, shown in Loxone Config) — which is resolved to the
-Miniserver's current public address on every connect. The **port field still applies**: Cloud DNS only
-publishes the Miniserver's *web* port, so FTP needs its own port reachable from
-outside. That means opening TCP/21 (or your forwarded port) **and** the passive
-data-port range on your router, which exposes admin credentials to the internet
-unless FTP is set to *Enabled – TLS only*. A VPN into the LAN is the safer route and
-needs no special address.
+The app opens a plain FTP connection to whatever address you enter — nothing is
+tunnelled or proxied. So remote access works exactly when the address leads **into
+your own network** and the FTP port is reachable there:
+
+- ✅ **VPN into the LAN** — connect to the Miniserver's local address (e.g.
+  `192.168.11.23`) as if you were at home. Nothing exposed to the internet; the
+  recommended way.
+- ✅ **Your own DNS / DynDNS** — a router's dynamic-DNS name, a static IP, your own
+  domain. Enter it like any other host, with the FTP port you forwarded.
+- ❌ **Loxone Remote Connect** — the remote access built into Loxone Config, and what
+  `dns.loxonecloud.com/<serial>` resolves to on a standard setup. **This does not
+  work.** The address is a Loxone-operated relay, not your router: it proxies only
+  HTTP(S) to the Miniserver's web server, so there is no FTP port behind it to reach.
+  No router or firewall setting changes that. Tell-tale signs are a redirect target
+  that changes IP *and* port between lookups and belongs to a hosting provider rather
+  than your ISP.
+
+The host field does accept a Loxone Cloud DNS address —
+`dns.loxonecloud.com/<serial>`, where `<serial>` is the Miniserver's serial number
+(its MAC without separators, shown in Loxone Config) — and re-resolves it on every
+connect, since the published address changes. That is only useful in the **direct**
+case, where the entry points at your own connection instead of the relay: Cloud DNS
+publishes only the *web* port, so TCP/21 (or your forwarded port, which stays in the
+app's port field) **and** the passive data-port range have to be opened separately.
+
+Whichever route you pick, FTP must be enabled on the Miniserver — Cloud DNS resolves
+an address, it does not switch anything on. And exposing FTP to the internet puts
+admin credentials on the wire unless FTP is set to *Enabled – TLS only*, which is why
+the VPN route is worth the setup.
 
 ## Important notes on editing
 
