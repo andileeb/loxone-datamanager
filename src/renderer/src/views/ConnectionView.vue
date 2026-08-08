@@ -92,7 +92,25 @@ onMounted(() => conn.loadSaved())
   <main class="view connect">
     <AppControls class="corner" />
     <div class="panel">
-      <h1>{{ t('connect.title') }}</h1>
+      <div class="brand">
+        <svg
+          class="logo"
+          viewBox="0 0 64 64"
+          fill="none"
+          stroke="currentColor"
+          stroke-linecap="round"
+          aria-hidden="true"
+        >
+          <circle cx="28" cy="28" r="17" stroke-width="4.5" />
+          <path d="M41.8 41.8L52 52" stroke-width="6" />
+          <g stroke-width="5">
+            <path d="M21 37V30" />
+            <path d="M28 37V19" />
+            <path d="M35 37V25" />
+          </g>
+        </svg>
+        <h1>{{ t('connect.title') }}</h1>
+      </div>
       <p class="subtitle">{{ t('connect.subtitle') }}</p>
 
       <div v-if="conn.saved.length" class="saved">
@@ -203,6 +221,17 @@ onMounted(() => conn.loadSaved())
   display: flex;
   flex-direction: column;
   gap: 1rem;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.logo {
+  width: 2.75rem;
+  height: 2.75rem;
+  flex: none;
+  color: var(--p-primary-color);
 }
 .subtitle {
   color: var(--p-text-muted-color);

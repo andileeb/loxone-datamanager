@@ -3,6 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <title>Loxone DataManager</title>
+    <!-- inlined rather than linked: keeps it identical in dev and in the packaged
+         file:// build, and img-src allows data: (see CSP below) -->
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64' fill='none' stroke='%2334d399' stroke-linecap='round'%3E%3Ccircle cx='28' cy='28' r='17' stroke-width='4.5'/%3E%3Cpath d='M41.8 41.8L52 52' stroke-width='6'/%3E%3Cg stroke-width='5'%3E%3Cpath d='M21 37V30'/%3E%3Cpath d='M28 37V19'/%3E%3Cpath d='M35 37V25'/%3E%3C/g%3E%3C/svg%3E"
+    />
     <!-- https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP -->
     <meta
       http-equiv="Content-Security-Policy"
