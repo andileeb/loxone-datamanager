@@ -90,6 +90,13 @@ Release: push a `v*` tag → `.github/workflows/release.yml` builds macOS univer
   conversion) — exactly like LoxStatEdit. Loxone epoch offset = 1230768000.
 - **Write path is FTP-only** (no HTTP/WS API can write stats). Firmware 16.1+
   ships FTP **disabled**; Loxone Config → Miniserver network settings enables it.
+- **Loxone Cloud DNS** (`dns.loxonecloud.com/<serial>`) is an HTTP **307 redirect**,
+  not a DNS record: `Location: https://<ip-with-dashes>.<serial>.dyndns.loxonecloud.com:<webPort>/`.
+  `resolveHost()` in ftp.ts takes only the hostname — the port is the *web* port,
+  FTP keeps the port from the form. Both host and port change over time, so resolve
+  per connect (inside `open()`), never at save time. Reaching FTP that way still
+  needs port 21 + the passive range forwarded; Loxone remote connect forwards
+  neither.
 - After upload the Miniserver must be **restarted** + Loxone app cache cleared —
   the UI shows this checklist; keep it.
 - Current-month files are still being appended by the Miniserver → editor warns.

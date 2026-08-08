@@ -16,6 +16,8 @@ interface Session {
 let session: Session | null = null
 /** client of an in-flight open(); doubles as the cancel token — disconnect() nulls it */
 let pending: Client | null = null
+/** in-flight cloud-DNS lookup, so cancelling works before the socket even exists */
+let pendingDns: AbortController | null = null
 let queue: Promise<unknown> = Promise.resolve()
 
 export class NotConnectedError extends Error {
@@ -28,7 +30,45 @@ function isAuthError(e: unknown): boolean {
   return typeof e === 'object' && e !== null && 'code' in e && (e as { code: unknown }).code === 530
 }
 
+const CLOUD_DNS_RE = /^(?:https?:\/\/)?dns\.loxonecloud\.com\/([0-9A-Fa-f]{12})\/?$/i
+
+/** serial out of a Loxone Cloud DNS address ("dns.loxonecloud.com/<serial>"), else null */
+export function cloudDnsSerial(host: string): string | null {
+  return CLOUD_DNS_RE.exec(host.trim())?.[1] ?? null
+}
+
+/**
+ * Loxone Cloud DNS 307-redirects to the Miniserver's current public address
+ * (e.g. https://2a01-…-1.<serial>.dyndns.loxonecloud.com:52901/). Only the host is
+ * usable — the port in the redirect is the *web* port, FTP uses the one from the form.
+ */
+async function resolveHost(host: string): Promise<string> {
+  const serial = cloudDnsSerial(host)
+  if (!serial) return host
+  const ac = new AbortController()
+  pendingDns = ac
+  const timer = setTimeout(() => ac.abort(), TIMEOUT_MS)
+  let location: string | null
+  try {
+    const res = await fetch(`http://dns.loxonecloud.com/${serial}`, {
+      redirect: 'manual',
+      signal: ac.signal
+    })
+    location = res.headers.get('location')
+  } catch (e) {
+    // don't leak ENOTFOUND/abort up as an FTP error — the lookup, not the Miniserver, failed
+    throw new Error(`Loxone Cloud DNS lookup failed: ${(e as Error).message}`)
+  } finally {
+    clearTimeout(timer)
+    pendingDns = null
+  }
+  if (!location) throw new Error(`Loxone Cloud DNS has no entry for Miniserver ${serial}`)
+  return new URL(location).hostname
+}
+
 async function open(args: ConnectPayload): Promise<Session> {
+  // resolved per attempt, not once at save time — the public address is dynamic
+  const host = await resolveHost(args.host)
   const attempts: TlsMode[] =
     args.tls === 'auto' ? ['ftps', 'plain'] : [args.tls === 'ftps' ? 'ftps' : 'plain']
   let lastErr: unknown
@@ -37,7 +77,7 @@ async function open(args: ConnectPayload): Promise<Session> {
     pending = client
     try {
       await client.access({
-        host: args.host,
+        host,
         port: args.port,
         user: args.user,
         password: args.password,
@@ -68,6 +108,7 @@ export async function connect(args: ConnectPayload): Promise<TlsMode> {
 export function disconnect(): null {
   pending?.close() // aborts a connect attempt still in flight
   pending = null
+  pendingDns?.abort()
   session?.client.close()
   session = null
   return null

@@ -49,6 +49,18 @@ Since firmware 16.1 the Miniserver's FTP server is **disabled by default**. In
 
 Connect with a Miniserver **admin** user.
 
+### Connecting remotely
+
+The host field also accepts a Loxone Cloud DNS address —
+`dns.loxonecloud.com/<serial>`, where `<serial>` is your Miniserver's serial number
+(its MAC without separators, shown in Loxone Config) — which is resolved to the
+Miniserver's current public address on every connect. The **port field still applies**: Cloud DNS only
+publishes the Miniserver's *web* port, so FTP needs its own port reachable from
+outside. That means opening TCP/21 (or your forwarded port) **and** the passive
+data-port range on your router, which exposes admin credentials to the internet
+unless FTP is set to *Enabled – TLS only*. A VPN into the LAN is the safer route and
+needs no special address.
+
 ## Important notes on editing
 
 - Statistics live in monthly binary files `/stats/<uuid>.<yyyyMM>` on the SD card.
