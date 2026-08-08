@@ -93,6 +93,15 @@ into `tests/fixtures/` (they are round-trip tested automatically) — the record
 for those files has two conflicting community interpretations and real samples help
 confirm the auto-detection.
 
+## Feedback & contributing
+
+Found a bug or missing a feature? Open an [issue](../../issues) — the templates ask
+for the few details that usually matter (app version, OS, Miniserver generation).
+
+Pull requests are welcome; please run `pnpm test` and `pnpm run lint` first.
+
+This is a hobby project maintained in spare time, so replies may take a while.
+
 ## MCP server
 
 The app can expose an [MCP](https://modelcontextprotocol.io) server so AI assistants
@@ -125,3 +134,5 @@ token-API read-only mode · signed builds + auto-update
 ## License
 
 MIT — see [LICENSE](LICENSE). Not affiliated with Loxone Electronics GmbH.
+
+Built with the help of [Claude Code](https://claude.com/claude-code).
