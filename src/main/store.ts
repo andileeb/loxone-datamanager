@@ -59,10 +59,22 @@ export function getConnection(id: string): ConnMeta | null {
   return load().connections.find((c) => c.id === id) ?? null
 }
 
-export function getPassword(id: string): string | null {
-  const b64 = load().secrets[id]
+/**
+ * Ciphertext is only decryptable by the app that wrote it — a dev build and the
+ * packaged app get different macOS keychain entries while sharing userData, so
+ * decryption throws on the other one's data. Treat that as "no secret stored".
+ */
+function decrypt(b64: string | null | undefined): string | null {
   if (!b64 || !safeStorage.isEncryptionAvailable()) return null
-  return safeStorage.decryptString(Buffer.from(b64, 'base64'))
+  try {
+    return safeStorage.decryptString(Buffer.from(b64, 'base64'))
+  } catch {
+    return null
+  }
+}
+
+export function getPassword(id: string): string | null {
+  return decrypt(load().secrets[id])
 }
 
 const MCP_DEFAULTS = { enabled: false, port: 12009, tokenEnc: null }
@@ -82,8 +94,7 @@ export function getMcpToken(): string | null {
   const enc = load().mcp?.tokenEnc
   if (!enc) return null
   if (enc.startsWith('plain:')) return enc.slice(6)
-  if (!safeStorage.isEncryptionAvailable()) return null
-  return safeStorage.decryptString(Buffer.from(enc, 'base64'))
+  return decrypt(enc)
 }
 
 export function regenerateMcpToken(): string {
