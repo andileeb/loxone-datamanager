@@ -38,6 +38,9 @@ const api: Api = {
       ipcRenderer.invoke('mcp:configure', enabled, port),
     regenerateToken: () => ipcRenderer.invoke('mcp:regenerateToken')
   },
+  updates: {
+    check: () => ipcRenderer.invoke('updates:check')
+  },
   onTransferProgress: (cb: (p: TransferProgress) => void) => {
     const listener = (_e: IpcRendererEvent, p: TransferProgress): void => cb(p)
     ipcRenderer.on('transfer:progress', listener)

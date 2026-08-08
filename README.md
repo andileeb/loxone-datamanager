@@ -146,11 +146,6 @@ server is read-only; this one can write, because it uses the app's FTP path).
 The server listens on `127.0.0.1` only and runs while the app is open. The token can
 be regenerated anytime in Settings.
 
-## Roadmap
-
-CSV import · resampling · old→new meter conversion · multi-month stitched charts ·
-token-API read-only mode · signed builds + auto-update
-
 ## License
 
 MIT — see [LICENSE](LICENSE). Not affiliated with Loxone Electronics GmbH.

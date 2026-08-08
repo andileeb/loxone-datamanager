@@ -49,6 +49,11 @@ Release: push a `v*` tag → `.github/workflows/release.yml` builds macOS univer
     events tell the renderer to refresh (EditorView shows a reload banner —
     last-save-wins, no merging). Lifecycle: start on app ready if enabled,
     `mcp:configure` IPC restarts, `EADDRINUSE` lands in `McpState.error`.
+  - `updates.ts` — release-notification only, **no Electron imports** (takes the
+    current version as an argument, so it unit-tests). One `fetch` of GitHub's
+    `/releases/latest` per launch; every failure (offline, 403 rate-limit, no
+    published release) resolves as `latest: null` — a failed check must never
+    surface as an app error. See "Auto-update" below for why there's no installer.
 - `src/preload/index.ts` — contextBridge exposing `window.api`, typed by the
   single contract interface in `src/shared/api.ts` (preload implements it,
   renderer consumes it — extend the interface first when adding IPC).
@@ -105,6 +110,15 @@ Release: push a `v*` tag → `.github/workflows/release.yml` builds macOS univer
 - Current-month files are still being appended by the Miniserver → editor warns.
 - Loxone's official MCP server (fw 17.1) reads history but cannot write; it's a
   potential read-only add-on, never a replacement for FTP.
+- **Auto-update**: only the *notification* exists (`updates.ts`), deliberately.
+  `electron-updater` with the GitHub provider is free for a public repo, but
+  macOS auto-update needs a real Developer ID signature — Squirrel.Mac rejects
+  unsigned updates (`Could not get code signature for running application`) — plus a
+  `zip` target next to the `dmg`. Builds here are unsigned (`notarize: false`), so it
+  would work on Windows NSIS only. Prerequisites if that ever changes: a `publish:`
+  block in electron-builder.yml (without it no `latest*.yml` / `app-update.yml` is
+  produced), `--publish always` in release.yml, the `.yml` + `.blockmap` assets
+  attached, and a **published** release — the updater ignores drafts.
 
 ## Constraints & gotchas
 
@@ -138,10 +152,3 @@ Release: push a `v*` tag → `.github/workflows/release.yml` builds macOS univer
   on the server → delete). Rebuild (`pnpm run build`) before driving — the app
   loads from `out/`.
 - Before a release run `docs/e2e-checklist.md` against a real Gen 2 Miniserver.
-
-## Roadmap (agreed, not built)
-
-CSV import · resampling · old→new meter conversion · multi-month stitched
-charts · token-API read-only mode (statisticV2 meters, no FTP) · signed builds +
-auto-update (needs Apple Developer ID) · CSV export honoring
-the date/time prefs (currently fixed ISO).

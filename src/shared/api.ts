@@ -11,7 +11,8 @@ import type {
   StatRecord,
   TlsMode,
   TlsPref,
-  TransferProgress
+  TransferProgress,
+  UpdateCheck
 } from './types'
 
 export interface ConnectPayload {
@@ -63,6 +64,10 @@ export interface Api {
     /** persists the config and starts/stops/restarts the server accordingly */
     configure(enabled: boolean, port: number): Promise<IpcResult<McpState>>
     regenerateToken(): Promise<IpcResult<McpState>>
+  }
+  updates: {
+    /** asks GitHub for the newest release; never rejects, latest is null when it failed */
+    check(): Promise<IpcResult<UpdateCheck>>
   }
   onTransferProgress(cb: (p: TransferProgress) => void): () => void
   onMcpActivity(cb: (a: McpActivity) => void): () => void

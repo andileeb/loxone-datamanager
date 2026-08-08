@@ -9,7 +9,7 @@ import InputText from 'primevue/inputtext'
 import Message from 'primevue/message'
 import Password from 'primevue/password'
 import Select from 'primevue/select'
-import type { ConnMeta, TlsPref } from '../../../shared/types'
+import type { ConnMeta, TlsPref, UpdateCheck } from '../../../shared/types'
 import AppControls from '../components/AppControls.vue'
 import { useConnectionStore } from '../stores/connection'
 import { errorText } from '../i18n'
@@ -85,7 +85,15 @@ async function useSaved(meta: ConnMeta): Promise<void> {
   }
 }
 
-onMounted(() => conn.loadSaved())
+const update = ref<UpdateCheck | null>(null)
+
+onMounted(async () => {
+  await conn.loadSaved()
+  // /connect is the cold-start screen (the router guard sends every start here, since a
+  // connection is never persisted), so this doubles as the startup update check
+  const r = await window.api.updates.check()
+  if (r.ok) update.value = r.data
+})
 </script>
 
 <template>
@@ -199,6 +207,11 @@ onMounted(() => conn.loadSaved())
       <Message v-if="conn.error?.code === 'FTP_REFUSED'" severity="warn" :closable="false">
         <!-- eslint-disable-next-line vue/no-v-html -->
         <span v-html="t('connect.ftpHint')"></span>
+      </Message>
+      <Message v-if="update?.updateAvailable" severity="info" closable>
+        {{ t('update.available', { latest: update.latest }) }}
+        <!-- setWindowOpenHandler in main/index.ts turns target=_blank into shell.openExternal -->
+        <a :href="update.url" target="_blank">{{ t('update.download') }}</a>
       </Message>
     </div>
   </main>

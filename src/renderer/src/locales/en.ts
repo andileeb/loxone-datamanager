@@ -153,6 +153,15 @@ export default {
       'Any client supporting Streamable HTTP works with this URL and token. ' +
       'The server only runs while the app is open.'
   },
+  update: {
+    version: 'Version',
+    check: 'Check for updates',
+    checking: 'Checking…',
+    available: 'Version {latest} is available.',
+    download: 'Download',
+    upToDate: 'Up to date',
+    checkFailed: 'Could not check for updates'
+  },
   errors: {
     FTP_REFUSED: 'Connection refused — the Miniserver did not accept the FTP connection',
     FTP_AUTH_FAILED: 'Login failed — check user and password',

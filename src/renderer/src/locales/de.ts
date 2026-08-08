@@ -158,6 +158,15 @@ const de: typeof en = {
       'Jeder Client mit Streamable HTTP funktioniert mit dieser URL und diesem Token. ' +
       'Der Server läuft nur, solange die App geöffnet ist.'
   },
+  update: {
+    version: 'Version',
+    check: 'Nach Updates suchen',
+    checking: 'Suche…',
+    available: 'Version {latest} ist verfügbar.',
+    download: 'Herunterladen',
+    upToDate: 'Aktuell',
+    checkFailed: 'Update-Suche fehlgeschlagen'
+  },
   errors: {
     FTP_REFUSED: 'Verbindung abgelehnt — der Miniserver hat die FTP-Verbindung nicht angenommen',
     FTP_AUTH_FAILED: 'Anmeldung fehlgeschlagen — Benutzer und Passwort prüfen',

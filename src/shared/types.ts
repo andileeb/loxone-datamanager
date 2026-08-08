@@ -97,6 +97,16 @@ export interface McpState {
   error: string | null
 }
 
+/** result of the GitHub release check (notification only — the app never self-installs) */
+export interface UpdateCheck {
+  current: string
+  /** null when the check failed: offline, rate-limited, or no release published yet */
+  latest: string | null
+  /** release page to open in the browser */
+  url: string
+  updateAvailable: boolean
+}
+
 /** broadcast to the renderer when an MCP client changes something the UI may show */
 export interface McpActivity {
   kind: 'save' | 'upload' | 'delete' | 'download' | 'connect' | 'disconnect'

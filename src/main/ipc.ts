@@ -1,4 +1,4 @@
-import { dialog, ipcMain, shell } from 'electron'
+import { app, dialog, ipcMain, shell } from 'electron'
 import { mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
@@ -8,6 +8,7 @@ import * as store from './store'
 import * as cache from './cache'
 import * as stats from './stats-service'
 import * as mcp from './mcp'
+import * as updates from './updates'
 import { CodedError, toApiError } from './stats-service'
 import { validateRecords } from './statfile'
 import type { ConnMeta, IpcResult, McpState, StatRecord } from '../shared/types'
@@ -149,6 +150,8 @@ export function registerIpc(): void {
     store.regenerateMcpToken()
     return mcpState()
   })
+
+  handle('updates:check', () => updates.check(app.getVersion()))
 
   handle('stat:parse', (name: string) => stats.toStatFileData(stats.loadParsed(name)))
   handle('stat:validate', (name: string, records: StatRecord[]) => {

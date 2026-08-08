@@ -12,7 +12,7 @@ import ToggleSwitch from 'primevue/toggleswitch'
 import { setLocale, type AppLocale } from '../i18n'
 import { isDark, toggleDark } from '../theme'
 import { formatDateTime, prefs } from '../prefs'
-import type { McpState } from '../../../shared/types'
+import type { McpState, UpdateCheck } from '../../../shared/types'
 
 const router = useRouter()
 const { t, locale } = useI18n()
@@ -55,9 +55,26 @@ const example = computed(() => {
 const mcp = ref<McpState | null>(null)
 const copied = ref<'token' | 'snippet' | null>(null)
 
+const update = ref<UpdateCheck | null>(null)
+const checking = ref(false)
+
+async function checkUpdates(): Promise<void> {
+  checking.value = true
+  const r = await window.api.updates.check()
+  checking.value = false
+  if (r.ok) update.value = r.data
+}
+
+const updateStatus = computed(() => {
+  if (!update.value) return ''
+  if (update.value.updateAvailable) return t('update.available', { latest: update.value.latest })
+  return update.value.latest === null ? t('update.checkFailed') : t('update.upToDate')
+})
+
 onMounted(async () => {
   const r = await window.api.mcp.get()
   if (r.ok) mcp.value = r.data
+  await checkUpdates()
 })
 
 async function configureMcp(enabled: boolean, port: number): Promise<void> {
@@ -150,6 +167,22 @@ async function copyText(text: string, which: 'token' | 'snippet'): Promise<void>
 
       <p class="example">{{ t('settings.example', { example }) }}</p>
       <p class="hint">{{ t('settings.shortcutHint') }}</p>
+
+      <p>{{ t('update.version') }} {{ update?.current ?? '' }}</p>
+      <div class="update">
+        <Button
+          :label="checking ? t('update.checking') : t('update.check')"
+          size="small"
+          severity="secondary"
+          outlined
+          :disabled="checking"
+          @click="checkUpdates"
+        />
+        <a v-if="update?.updateAvailable" :href="update.url" target="_blank">
+          {{ updateStatus }}
+        </a>
+        <span v-else class="hint">{{ updateStatus }}</span>
+      </div>
 
       <template v-if="mcp">
         <h2>{{ t('settings.mcpTitle') }}</h2>
@@ -264,6 +297,14 @@ h2 {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+.update {
+  /* pull the box out by border+padding so the button *label* lines up with "Version" above */
+  margin-left: calc(-1 * (var(--p-button-sm-padding-x) + 1px));
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
 }
 .token-input {
   flex: 1;
