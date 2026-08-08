@@ -6,7 +6,7 @@ import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
 import RadioButton from 'primevue/radiobutton'
 import Select from 'primevue/select'
-import { compileFormula } from '../lib/formula'
+import { compileFormula } from '../../../shared/formula'
 
 const { t } = useI18n()
 

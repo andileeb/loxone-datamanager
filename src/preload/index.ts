@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 import type { Api, ConnectPayload, TransferFilePayload } from '../shared/api'
-import type { ConnMeta, StatRecord, TransferProgress } from '../shared/types'
+import type { ConnMeta, McpActivity, StatRecord, TransferProgress } from '../shared/types'
 
 const api: Api = {
   ftp: {
@@ -32,10 +32,21 @@ const api: Api = {
       ipcRenderer.invoke('stat:serialize', name, records),
     exportCsv: (name: string) => ipcRenderer.invoke('stat:exportCsv', name)
   },
+  mcp: {
+    get: () => ipcRenderer.invoke('mcp:get'),
+    configure: (enabled: boolean, port: number) =>
+      ipcRenderer.invoke('mcp:configure', enabled, port),
+    regenerateToken: () => ipcRenderer.invoke('mcp:regenerateToken')
+  },
   onTransferProgress: (cb: (p: TransferProgress) => void) => {
     const listener = (_e: IpcRendererEvent, p: TransferProgress): void => cb(p)
     ipcRenderer.on('transfer:progress', listener)
     return () => ipcRenderer.removeListener('transfer:progress', listener)
+  },
+  onMcpActivity: (cb: (a: McpActivity) => void) => {
+    const listener = (_e: IpcRendererEvent, a: McpActivity): void => cb(a)
+    ipcRenderer.on('mcp:activity', listener)
+    return () => ipcRenderer.removeListener('mcp:activity', listener)
   }
 }
 

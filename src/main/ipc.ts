@@ -1,5 +1,4 @@
 import { dialog, ipcMain, shell } from 'electron'
-import { FTPError } from 'basic-ftp'
 import { mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
@@ -7,36 +6,12 @@ import { zipSync, type Zippable } from 'fflate'
 import * as ftp from './ftp'
 import * as store from './store'
 import * as cache from './cache'
-import { parseStatFile, serializeStatFile, validateRecords, type ParsedStatFile } from './statfile'
-import { loxToDisplay } from '../shared/time'
-import type { ApiError, ConnMeta, IpcResult, StatFileData, StatRecord } from '../shared/types'
+import * as stats from './stats-service'
+import * as mcp from './mcp'
+import { CodedError, toApiError } from './stats-service'
+import { validateRecords } from './statfile'
+import type { ConnMeta, IpcResult, McpState, StatRecord } from '../shared/types'
 import type { ConnectPayload, TransferFilePayload } from '../shared/api'
-
-class CodedError extends Error {
-  constructor(
-    public apiCode: ApiError['code'],
-    message: string
-  ) {
-    super(message)
-  }
-}
-
-function toApiError(e: unknown): ApiError {
-  if (e instanceof CodedError) return { code: e.apiCode, message: e.message }
-  if (e instanceof ftp.NotConnectedError) return { code: 'FTP_NOT_CONNECTED', message: e.message }
-  if (e instanceof FTPError) {
-    if (e.code === 530)
-      return { code: 'FTP_AUTH_FAILED', message: 'Login failed — check user and password' }
-    return { code: 'UNKNOWN', message: e.message }
-  }
-  const msg = e instanceof Error ? e.message : String(e)
-  const sysCode = (e as NodeJS.ErrnoException)?.code
-  if (sysCode === 'ECONNREFUSED' || sysCode === 'EHOSTUNREACH' || sysCode === 'ENOTFOUND') {
-    return { code: 'FTP_REFUSED', message: msg }
-  }
-  if (/timeout/i.test(msg)) return { code: 'FTP_TIMEOUT', message: msg }
-  return { code: 'UNKNOWN', message: msg }
-}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Handler = (...args: any[]) => unknown
@@ -62,35 +37,6 @@ function handleE(channel: string, fn: Handler): void {
   })
 }
 
-/** parsed files kept per session so serialization can re-emit the original header bytes */
-const parsedFiles = new Map<string, ParsedStatFile>()
-
-function loadParsed(name: string): ParsedStatFile {
-  const path = cache.cachePath(ftp.activeHost(), name)
-  let parsed: ParsedStatFile
-  try {
-    parsed = parseStatFile(readFileSync(path), name)
-  } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === 'ENOENT') {
-      throw new CodedError('IO_ERROR', `${name} is not downloaded yet`)
-    }
-    throw new CodedError('PARSE_ERROR', e instanceof Error ? e.message : String(e))
-  }
-  parsedFiles.set(name, parsed)
-  return parsed
-}
-
-function toStatFileData(p: ParsedStatFile): StatFileData {
-  return {
-    fileName: p.fileName,
-    nameFromHeader: p.nameFromHeader,
-    valueCount: p.valueCount,
-    stride: p.stride,
-    records: p.records,
-    problems: p.problems
-  }
-}
-
 export function registerIpc(): void {
   handle('ftp:connect', (args: ConnectPayload) => ftp.connect(args))
   handle('ftp:connectSaved', (id: string) => {
@@ -103,7 +49,7 @@ export function registerIpc(): void {
     return ftp.connect({ ...meta, password })
   })
   handle('ftp:disconnect', () => {
-    parsedFiles.clear()
+    stats.clear()
     return ftp.disconnect()
   })
   handle('ftp:listStats', () => ftp.listStats())
@@ -181,35 +127,45 @@ export function registerIpc(): void {
     return null
   })
 
-  handle('stat:parse', (name: string) => toStatFileData(loadParsed(name)))
+  const mcpState = (): McpState => {
+    const { enabled, port } = store.getMcpConfig()
+    const { running, error } = mcp.status()
+    return {
+      enabled,
+      port,
+      token: store.getMcpToken(),
+      running,
+      url: `http://127.0.0.1:${port}/mcp`,
+      error
+    }
+  }
+  handle('mcp:get', () => mcpState())
+  handle('mcp:configure', async (enabled: boolean, port: number) => {
+    store.setMcpConfig(enabled, port)
+    await mcp.start() // reads the stored config; stops when disabled
+    return mcpState()
+  })
+  handle('mcp:regenerateToken', () => {
+    store.regenerateMcpToken()
+    return mcpState()
+  })
+
+  handle('stat:parse', (name: string) => stats.toStatFileData(stats.loadParsed(name)))
   handle('stat:validate', (name: string, records: StatRecord[]) => {
-    const parsed = parsedFiles.get(name) ?? loadParsed(name)
-    const yyyymm = name.slice(-6)
-    return validateRecords(records, yyyymm, parsed.valueCount)
+    const parsed = stats.getParsed(name)
+    return validateRecords(records, name.slice(-6), parsed.valueCount)
   })
-  handle('stat:serialize', (name: string, records: StatRecord[]) => {
-    const parsed = parsedFiles.get(name) ?? loadParsed(name)
-    const buf = serializeStatFile(parsed, records)
-    writeFileSync(cache.cachePath(ftp.activeHost(), name), buf)
-    parsed.records = records
-    parsed.problems = validateRecords(records, name.slice(-6), parsed.valueCount)
-    return parsed.problems
-  })
+  handle('stat:serialize', (name: string, records: StatRecord[]) =>
+    stats.saveRecords(name, records)
+  )
   handle('stat:exportCsv', async (name: string) => {
-    const parsed = parsedFiles.get(name) ?? loadParsed(name)
+    const parsed = stats.getParsed(name)
     const { canceled, filePath } = await dialog.showSaveDialog({
       defaultPath: `${name}.csv`,
       filters: [{ name: 'CSV', extensions: ['csv'] }]
     })
     if (canceled || !filePath) return null
-    const header = [
-      'Timestamp',
-      ...Array.from({ length: parsed.valueCount }, (_, i) => `Value ${i + 1}`)
-    ].join(';')
-    const lines = parsed.records.map((r) =>
-      [loxToDisplay(r.ts), ...r.values.map((v) => String(v))].join(';')
-    )
-    writeFileSync(filePath, [header, ...lines].join('\n') + '\n')
+    writeFileSync(filePath, stats.buildCsv(parsed).csv)
     return filePath
   })
 }

@@ -7,6 +7,7 @@ import type {
   TransferProgress
 } from '../../../shared/types'
 import { STAT_FILENAME_RE } from '../../../shared/types'
+import { statusOf } from '../../../shared/records'
 
 export interface FileRow {
   name: string
@@ -24,15 +25,6 @@ export const SUFFIX_KEYS: Record<number, string> = {
   1: 'power',
   2: 'meterReading',
   3: 'storageLevel'
-}
-
-function statusOf(remote: RemoteFile | undefined, cached: CachedFile | undefined): SyncStatus {
-  if (!cached) return 'only-remote'
-  if (!remote) return 'only-local'
-  const rt = remote.modifiedAt ? Date.parse(remote.modifiedAt) : 0
-  const ct = Date.parse(cached.modifiedAt)
-  if (remote.size === cached.size && Math.abs(rt - ct) < 1500) return 'same'
-  return rt > ct ? 'remote-newer' : 'local-newer'
 }
 
 export const useFilesStore = defineStore('files', {

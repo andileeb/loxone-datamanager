@@ -3,6 +3,7 @@ import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { registerIpc } from './ipc'
+import * as mcp from './mcp'
 
 function createWindow(): void {
   // Create the browser window.
@@ -51,6 +52,7 @@ app.whenReady().then(() => {
   })
 
   registerIpc()
+  void mcp.start()
   createWindow()
 
   app.on('activate', function () {
@@ -67,6 +69,10 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()
   }
+})
+
+app.on('will-quit', () => {
+  void mcp.stop()
 })
 
 // In this file you can include the rest of your app's specific main process

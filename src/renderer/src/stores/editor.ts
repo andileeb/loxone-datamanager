@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import type { ApiError, StatFileData, StatRecord } from '../../../shared/types'
+import { applyToRecords, dominantInterval, fillGaps as fillGapsPure } from '../../../shared/records'
 import { useFilesStore } from './files'
 
 let validateTimer: ReturnType<typeof setTimeout> | null = null
@@ -18,7 +19,9 @@ export const useEditorStore = defineStore('editor', {
     error: null as ApiError | null,
     selectedIndex: null as number | null,
     /** bumped after in-place cell edits so the chart refreshes */
-    chartVersion: 0
+    chartVersion: 0,
+    /** an MCP client saved this file behind the editor's back — offer a reload */
+    externallyChanged: false
   }),
   actions: {
     async load(name: string) {
@@ -27,6 +30,7 @@ export const useEditorStore = defineStore('editor', {
       this.data = null
       this.dirty = false
       this.selectedIndex = null
+      this.externallyChanged = false
       const r = await window.api.stat.parse(name)
       this.loading = false
       if (r.ok) this.data = r.data
@@ -60,21 +64,7 @@ export const useEditorStore = defineStore('editor', {
 
     /** dominant recording interval = most frequent timestamp delta */
     dominantInterval(): number {
-      const counts = new Map<number, number>()
-      const records = this.data?.records ?? []
-      for (let i = 1; i < records.length; i++) {
-        const d = records[i].ts - records[i - 1].ts
-        if (d > 0) counts.set(d, (counts.get(d) ?? 0) + 1)
-      }
-      let best = 600
-      let bestCount = 0
-      for (const [d, c] of counts) {
-        if (c > bestCount) {
-          best = d
-          bestCount = c
-        }
-      }
-      return best
+      return dominantInterval(this.data?.records ?? [])
     },
 
     insertRow(index: number, where: 'above' | 'below') {
@@ -109,31 +99,9 @@ export const useEditorStore = defineStore('editor', {
     /** insert linearly interpolated rows into gaps > 1.5× the dominant interval */
     fillGaps(): number {
       if (!this.data) return 0
-      const interval = this.dominantInterval()
-      const out: StatRecord[] = []
-      let inserted = 0
-      const records = this.data.records
-      for (let i = 0; i < records.length; i++) {
-        if (i > 0) {
-          const prev = records[i - 1]
-          const cur = records[i]
-          const gap = cur.ts - prev.ts
-          if (gap > interval * 1.5) {
-            const steps = Math.round(gap / interval) - 1
-            for (let s = 1; s <= steps; s++) {
-              const f = s / (steps + 1)
-              out.push({
-                ts: prev.ts + Math.round(gap * f),
-                values: prev.values.map((v, vi) => v + (cur.values[vi] - v) * f)
-              })
-              inserted++
-            }
-          }
-        }
-        out.push(records[i])
-      }
+      const { records, inserted } = fillGapsPure(this.data.records)
       if (inserted) {
-        this.data.records = out
+        this.data.records = records
         this.touch()
       }
       return inserted
@@ -141,12 +109,7 @@ export const useEditorStore = defineStore('editor', {
 
     applyFormula(fn: (v: number) => number, valueIdx: number | 'all', indices: number[]) {
       if (!this.data) return
-      const cols = valueIdx === 'all' ? [...Array(this.data.valueCount).keys()] : [valueIdx]
-      for (const i of indices) {
-        const r = this.data.records[i]
-        if (!r) continue
-        for (const c of cols) r.values[c] = fn(r.values[c])
-      }
+      applyToRecords(this.data.records, this.data.valueCount, fn, valueIdx, indices)
       this.touch()
     },
 

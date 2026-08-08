@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { compileFormula } from '../src/renderer/src/lib/formula'
+import { compileFormula } from '../src/shared/formula'
 
 describe('compileFormula', () => {
   const cases: Array<[string, number, number]> = [

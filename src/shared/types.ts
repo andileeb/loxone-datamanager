@@ -87,6 +87,22 @@ export interface ApiError {
 
 export type IpcResult<T> = { ok: true; data: T } | { ok: false; error: ApiError }
 
+/** state of the embedded MCP server, for the Settings UI */
+export interface McpState {
+  enabled: boolean
+  port: number
+  token: string | null
+  running: boolean
+  url: string
+  error: string | null
+}
+
+/** broadcast to the renderer when an MCP client changes something the UI may show */
+export interface McpActivity {
+  kind: 'save' | 'upload' | 'delete' | 'download' | 'connect' | 'disconnect'
+  name?: string
+}
+
 export const LOXONE_EPOCH_OFFSET = 1230768000 // 2009-01-01T00:00:00Z in unix seconds
 
 export const STAT_FILENAME_RE =

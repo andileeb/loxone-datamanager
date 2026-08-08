@@ -1,13 +1,18 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import Button from 'primevue/button'
+import InputNumber from 'primevue/inputnumber'
+import InputText from 'primevue/inputtext'
 import Select from 'primevue/select'
 import SelectButton from 'primevue/selectbutton'
+import Tag from 'primevue/tag'
+import ToggleSwitch from 'primevue/toggleswitch'
 import { setLocale, type AppLocale } from '../i18n'
 import { isDark, toggleDark } from '../theme'
 import { formatDateTime, prefs } from '../prefs'
+import type { McpState } from '../../../shared/types'
 
 const router = useRouter()
 const { t, locale } = useI18n()
@@ -46,6 +51,44 @@ const example = computed(() => {
   void prefs.timeFormat
   return formatDateTime(new Date(2026, 4, 31, 17, 45, 9))
 })
+
+const mcp = ref<McpState | null>(null)
+const copied = ref<'token' | 'snippet' | null>(null)
+
+onMounted(async () => {
+  const r = await window.api.mcp.get()
+  if (r.ok) mcp.value = r.data
+})
+
+async function configureMcp(enabled: boolean, port: number): Promise<void> {
+  const r = await window.api.mcp.configure(enabled, port)
+  if (r.ok) mcp.value = r.data
+}
+
+function onMcpToggle(): void {
+  if (mcp.value) void configureMcp(mcp.value.enabled, mcp.value.port)
+}
+
+function onMcpPortBlur(): void {
+  if (mcp.value?.port) void configureMcp(mcp.value.enabled, mcp.value.port)
+}
+
+async function regenerateToken(): Promise<void> {
+  const r = await window.api.mcp.regenerateToken()
+  if (r.ok) mcp.value = r.data
+}
+
+const mcpSnippet = computed(() =>
+  mcp.value
+    ? `claude mcp add --transport http loxone-datamanager ${mcp.value.url} --header "Authorization: Bearer ${mcp.value.token ?? '<token>'}"`
+    : ''
+)
+
+async function copyText(text: string, which: 'token' | 'snippet'): Promise<void> {
+  await navigator.clipboard.writeText(text)
+  copied.value = which
+  setTimeout(() => (copied.value = null), 1500)
+}
 </script>
 
 <template>
@@ -107,6 +150,71 @@ const example = computed(() => {
 
       <p class="example">{{ t('settings.example', { example }) }}</p>
       <p class="hint">{{ t('settings.shortcutHint') }}</p>
+
+      <template v-if="mcp">
+        <h2>{{ t('settings.mcpTitle') }}</h2>
+        <div class="row">
+          <label>{{ t('settings.mcpEnable') }}</label>
+          <div class="mcp-status">
+            <ToggleSwitch v-model="mcp.enabled" @change="onMcpToggle" />
+            <Tag
+              v-if="mcp.error"
+              severity="danger"
+              :value="t('settings.mcpError', { error: mcp.error })"
+            />
+            <Tag
+              v-else-if="mcp.running"
+              severity="success"
+              :value="t('settings.mcpRunning', { url: mcp.url })"
+            />
+            <Tag v-else severity="secondary" :value="t('settings.mcpStopped')" />
+          </div>
+        </div>
+        <div class="row">
+          <label>{{ t('settings.mcpPort') }}</label>
+          <InputNumber
+            v-model="mcp.port"
+            :min="1024"
+            :max="65535"
+            :use-grouping="false"
+            :disabled="mcp.enabled"
+            @blur="onMcpPortBlur"
+          />
+        </div>
+        <div class="row">
+          <label>{{ t('settings.mcpToken') }}</label>
+          <div class="mcp-token">
+            <InputText :model-value="mcp.token ?? ''" readonly class="token-input" />
+            <Button
+              :label="copied === 'token' ? t('settings.mcpCopied') : t('settings.mcpCopy')"
+              size="small"
+              severity="secondary"
+              :disabled="!mcp.token"
+              @click="copyText(mcp.token ?? '', 'token')"
+            />
+            <Button
+              :label="t('settings.mcpRegenerate')"
+              size="small"
+              severity="secondary"
+              outlined
+              @click="regenerateToken"
+            />
+          </div>
+        </div>
+        <template v-if="mcp.enabled && mcp.token">
+          <p class="hint">{{ t('settings.mcpSnippetLabel') }}</p>
+          <div class="mcp-snippet">
+            <pre>{{ mcpSnippet }}</pre>
+            <Button
+              :label="copied === 'snippet' ? t('settings.mcpCopied') : t('settings.mcpCopy')"
+              size="small"
+              severity="secondary"
+              @click="copyText(mcpSnippet, 'snippet')"
+            />
+          </div>
+        </template>
+        <p class="hint">{{ t('settings.mcpHint') }}</p>
+      </template>
     </div>
   </main>
 </template>
@@ -146,5 +254,35 @@ const example = computed(() => {
 .hint {
   color: var(--p-text-muted-color);
   font-size: 0.8rem;
+}
+h2 {
+  margin: 1rem 0 0;
+  font-size: 1.1rem;
+}
+.mcp-status,
+.mcp-token {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.token-input {
+  flex: 1;
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 0.85rem;
+}
+.mcp-snippet {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+.mcp-snippet pre {
+  flex: 1;
+  margin: 0;
+  padding: 0.5rem;
+  background: var(--p-content-hover-background);
+  border-radius: 6px;
+  font-size: 0.75rem;
+  white-space: pre-wrap;
+  word-break: break-all;
 }
 </style>

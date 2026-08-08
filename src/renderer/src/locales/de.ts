@@ -96,7 +96,10 @@ const de: typeof en = {
     postUploadStep1: '<b>Miniserver neu starten</b> (Loxone Config oder stromlos machen).',
     postUploadStep2:
       '<b>Cache der Loxone App leeren</b> (oder den Miniserver in der App entfernen und neu hinzufügen), damit zwischengespeicherte Statistiken aktualisiert werden.',
-    gotIt: 'Verstanden'
+    gotIt: 'Verstanden',
+    mcpChanged:
+      'Diese Datei wurde von einem MCP-Client geändert — neu laden, um die neuen Daten zu sehen.',
+    mcpReload: 'Neu laden'
   },
   formula: {
     title: 'Werte berechnen',
@@ -137,7 +140,22 @@ const de: typeof en = {
     time12: '12 Stunden (AM/PM)',
     example: 'Beispiel: {example}',
     shortcutHint:
-      'Diese Einstellungen sind jederzeit mit Cmd+, (macOS) bzw. Strg+, (Windows) erreichbar.'
+      'Diese Einstellungen sind jederzeit mit Cmd+, (macOS) bzw. Strg+, (Windows) erreichbar.',
+    mcpTitle: 'MCP-Server',
+    mcpEnable: 'Aktivieren',
+    mcpPort: 'Port',
+    mcpToken: 'Token',
+    mcpCopy: 'Kopieren',
+    mcpCopied: 'Kopiert',
+    mcpRegenerate: 'Neu erzeugen',
+    mcpRunning: 'Läuft — {url}',
+    mcpStopped: 'Gestoppt',
+    mcpError: 'Start fehlgeschlagen: {error}',
+    mcpSnippetLabel: 'Claude Code verbinden:',
+    mcpHint:
+      'Erlaubt MCP-Clients (Claude Code, Claude Desktop, …), Statistiken über diese App anzusehen und zu bearbeiten. ' +
+      'Jeder Client mit Streamable HTTP funktioniert mit dieser URL und diesem Token. ' +
+      'Der Server läuft nur, solange die App geöffnet ist.'
   },
   errors: {
     FTP_REFUSED: 'Verbindung abgelehnt — der Miniserver hat die FTP-Verbindung nicht angenommen',

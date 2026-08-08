@@ -3,6 +3,8 @@
 A modern, cross-platform viewer and editor for **Loxone Miniserver statistics** —
 heavily inspired by [LoxStatEdit](https://github.com/mr-manuel/Loxone_LoxStatEdit).
 
+[<img src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=&slug=andileeb&button_colour=FFDD00&font_colour=000000&font_family=Lato&outline_colour=000000&coffee_colour=ffffff" alt="Buy me a coffee" height="40">](https://www.buymeacoffee.com/andileeb)
+
 Browse the statistics stored on your Miniserver's SD card, chart them, fix broken
 entries (spikes, gaps, wrong meter readings), and upload the corrected files back —
 all from an installable desktop app for macOS and Windows. No config files: enter
@@ -21,6 +23,8 @@ your Miniserver connection in the app.
   only what you change changes
 - **Upload back** to the Miniserver, with a post-upload checklist (restart + app cache)
 - **CSV export**, saved connections (password in the OS keychain), Gen 1 and Gen 2 support
+- **MCP server**: let AI assistants (Claude Code, Claude Desktop, …) browse, analyze,
+  and fix your statistics through the app — see [MCP server](#mcp-server)
 
 ## Installation
 
@@ -77,9 +81,34 @@ into `tests/fixtures/` (they are round-trip tested automatically) — the record
 for those files has two conflicting community interpretations and real samples help
 confirm the auto-detection.
 
+## MCP server
+
+The app can expose an [MCP](https://modelcontextprotocol.io) server so AI assistants
+can view **and edit** statistics — connect, list files, summarize and validate data,
+fill gaps, apply formulas, edit records, save, and upload (Loxone's official MCP
+server is read-only; this one can write, because it uses the app's FTP path).
+
+1. Open **Settings** (gear icon or Cmd/Ctrl+,) → **MCP server** → enable it.
+2. Copy the shown command, e.g. for Claude Code:
+
+   ```sh
+   claude mcp add --transport http loxone-datamanager http://127.0.0.1:12009/mcp \
+     --header "Authorization: Bearer <token>"
+   ```
+
+   Any MCP client supporting Streamable HTTP works with the same URL + token.
+
+3. Ask things like _"connect to my Miniserver, find gaps in last month's energy
+   statistics and fill them"_ — destructive steps (upload, delete) always go through
+   your client's tool-approval prompt.
+
+The server listens on `127.0.0.1` only and runs while the app is open. The token can
+be regenerated anytime in Settings.
+
 ## Roadmap
 
-MCP integration
+CSV import · resampling · old→new meter conversion · multi-month stitched charts ·
+token-API read-only mode · signed builds + auto-update
 
 ## License
 

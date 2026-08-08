@@ -1,4 +1,5 @@
 import { app, safeStorage } from 'electron'
+import { randomBytes } from 'crypto'
 import { mkdirSync, readFileSync, writeFileSync } from 'fs'
 import { join } from 'path'
 import type { ConnMeta } from '../shared/types'
@@ -8,6 +9,12 @@ interface StoreShape {
   connections: ConnMeta[]
   /** base64 of safeStorage-encrypted passwords, keyed by connection id */
   secrets: Record<string, string>
+  mcp?: {
+    enabled: boolean
+    port: number
+    /** safeStorage-encrypted token (base64), or plaintext with the `plain:` prefix */
+    tokenEnc: string | null
+  }
 }
 
 const storeFile = (): string => join(app.getPath('userData'), 'connections.json')
@@ -56,4 +63,37 @@ export function getPassword(id: string): string | null {
   const b64 = load().secrets[id]
   if (!b64 || !safeStorage.isEncryptionAvailable()) return null
   return safeStorage.decryptString(Buffer.from(b64, 'base64'))
+}
+
+const MCP_DEFAULTS = { enabled: false, port: 12009, tokenEnc: null }
+
+export function getMcpConfig(): { enabled: boolean; port: number } {
+  const { enabled, port } = load().mcp ?? MCP_DEFAULTS
+  return { enabled, port }
+}
+
+export function setMcpConfig(enabled: boolean, port: number): void {
+  const s = load()
+  s.mcp = { ...(s.mcp ?? MCP_DEFAULTS), enabled, port }
+  persist(s)
+}
+
+export function getMcpToken(): string | null {
+  const enc = load().mcp?.tokenEnc
+  if (!enc) return null
+  if (enc.startsWith('plain:')) return enc.slice(6)
+  if (!safeStorage.isEncryptionAvailable()) return null
+  return safeStorage.decryptString(Buffer.from(enc, 'base64'))
+}
+
+export function regenerateMcpToken(): string {
+  const token = randomBytes(32).toString('base64url')
+  const s = load()
+  // ponytail: plaintext fallback — the token only gates a localhost port, same trust level as the stats cache itself
+  const tokenEnc = safeStorage.isEncryptionAvailable()
+    ? safeStorage.encryptString(token).toString('base64')
+    : `plain:${token}`
+  s.mcp = { ...(s.mcp ?? MCP_DEFAULTS), tokenEnc }
+  persist(s)
+  return token
 }

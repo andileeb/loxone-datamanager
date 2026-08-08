@@ -94,7 +94,9 @@ export default {
     postUploadStep1: '<b>Restart the Miniserver</b> (Loxone Config or power cycle).',
     postUploadStep2:
       '<b>Clear the Loxone app cache</b> (or remove and re-add the Miniserver in the app) so cached statistics are refreshed.',
-    gotIt: 'Got it'
+    gotIt: 'Got it',
+    mcpChanged: 'This file was changed by an MCP client — reload to see the new data.',
+    mcpReload: 'Reload'
   },
   formula: {
     title: 'Calculate values',
@@ -133,7 +135,22 @@ export default {
     time24: '24-hour',
     time12: '12-hour (AM/PM)',
     example: 'Example: {example}',
-    shortcutHint: 'Open these settings anytime with Cmd+, (macOS) or Ctrl+, (Windows).'
+    shortcutHint: 'Open these settings anytime with Cmd+, (macOS) or Ctrl+, (Windows).',
+    mcpTitle: 'MCP server',
+    mcpEnable: 'Enable',
+    mcpPort: 'Port',
+    mcpToken: 'Token',
+    mcpCopy: 'Copy',
+    mcpCopied: 'Copied',
+    mcpRegenerate: 'Regenerate',
+    mcpRunning: 'Running — {url}',
+    mcpStopped: 'Stopped',
+    mcpError: 'Failed to start: {error}',
+    mcpSnippetLabel: 'Connect Claude Code:',
+    mcpHint:
+      'Lets MCP clients (Claude Code, Claude Desktop, …) view and edit statistics through this app. ' +
+      'Any client supporting Streamable HTTP works with this URL and token. ' +
+      'The server only runs while the app is open.'
   },
   errors: {
     FTP_REFUSED: 'Connection refused — the Miniserver did not accept the FTP connection',

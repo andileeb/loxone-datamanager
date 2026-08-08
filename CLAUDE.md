@@ -33,15 +33,30 @@ Release: push a `v*` tag → `.github/workflows/release.yml` builds macOS univer
     `cachePath()` validates names against `STAT_FILENAME_RE` (path-traversal guard).
   - `store.ts` — saved connections: plain JSON in userData + passwords encrypted
     with Electron `safeStorage` (no keychain → password simply not stored).
-  - `ipc.ts` — all handlers. Every response is `IpcResult<T> = {ok,data}|{ok,error}`
-    with typed `ApiError.code` (e.g. `FTP_REFUSED` triggers the "enable FTP" hint
-    in the UI). Parsed files are kept in a Map so serialization re-emits the
-    original header bytes verbatim.
+  - `stats-service.ts` — shared session logic for IPC **and** MCP so they can't
+    diverge: `CodedError`/`toApiError`, the `parsedFiles` Map (serialization
+    re-emits the original header bytes verbatim), `saveRecords`, `buildCsv`,
+    MCP-side dirty tracking.
+  - `ipc.ts` — all handlers, thin over stats-service. Every response is
+    `IpcResult<T> = {ok,data}|{ok,error}` with typed `ApiError.code` (e.g.
+    `FTP_REFUSED` triggers the "enable FTP" hint in the UI).
+  - `mcp.ts` + `mcp-tools.ts` — embedded MCP server (`@modelcontextprotocol/sdk`
+    v1, **stateless** Streamable HTTP: fresh `McpServer` + transport per POST) on
+    `http://127.0.0.1:<port>/mcp`, default port 12009. Bearer-token auth (token
+    generated in Settings, safeStorage-encrypted in store.ts, `plain:` prefix
+    fallback); 20 tools + `fix-statistics` prompt share ftp/cache/stats-service
+    with the UI. Edits are in-memory until `save_stat_file`; `mcp:activity`
+    events tell the renderer to refresh (EditorView shows a reload banner —
+    last-save-wins, no merging). Lifecycle: start on app ready if enabled,
+    `mcp:configure` IPC restarts, `EADDRINUSE` lands in `McpState.error`.
 - `src/preload/index.ts` — contextBridge exposing `window.api`, typed by the
   single contract interface in `src/shared/api.ts` (preload implements it,
   renderer consumes it — extend the interface first when adding IPC).
 - `src/shared/` — types + `time.ts` (Loxone epoch helpers, multi-format
-  timestamp parsing) used by both sides.
+  timestamp parsing) + `formula.ts` (hand-rolled CSP-safe parser) + `records.ts`
+  (pure record transforms: dominantInterval, fillGaps, summarizeRecords,
+  statusOf, isCurrentMonth — used by the editor store AND the MCP tools; put new
+  record logic here, not in a Pinia action).
 - `src/renderer/src/` — Vue 3 + Pinia + PrimeVue 4 + uPlot + vue-i18n. Views:
   Connection → Browser (file list w/ sync status) → Editor (chart + virtualized
   grid + problems panel), plus Settings (Cmd/Ctrl+, or gear icon). Router guard:
@@ -88,7 +103,12 @@ Release: push a `v*` tag → `.github/workflows/release.yml` builds macOS univer
   (license key + eligibility). Do NOT upgrade these majors. If PrimeVue 4
   becomes unmaintained, migrate to an MIT alternative (e.g. Naive UI).
 - Renderer CSP forbids eval → bulk-edit formulas use the hand-rolled parser in
-  `renderer/src/lib/formula.ts`. Don't replace it with `new Function`.
+  `src/shared/formula.ts`. Don't replace it with `new Function`.
+- MCP smoke test without the UI: put
+  `"mcp": {"enabled": true, "port": 12009, "tokenEnc": "plain:<token>"}` into
+  `userData/connections.json`, run the app, then
+  `curl -X POST http://127.0.0.1:12009/mcp -H "Authorization: Bearer <token>" …`
+  with an `initialize` / `tools/call` JSON-RPC body.
 - Vue reactive proxies **cannot cross the contextBridge** ("object could not be
   cloned") — clone to plain objects before any `window.api` call that sends
   records (see `plain()` in `stores/editor.ts`).
@@ -113,5 +133,5 @@ Release: push a `v*` tag → `.github/workflows/release.yml` builds macOS univer
 
 CSV import · resampling · old→new meter conversion · multi-month stitched
 charts · token-API read-only mode (statisticV2 meters, no FTP) · signed builds +
-auto-update (needs Apple Developer ID) · MCP integration · CSV export honoring
+auto-update (needs Apple Developer ID) · CSV export honoring
 the date/time prefs (currently fixed ISO).

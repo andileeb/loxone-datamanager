@@ -3,6 +3,8 @@ import type {
   ConnMeta,
   DownloadOutcome,
   IpcResult,
+  McpActivity,
+  McpState,
   Problem,
   RemoteFile,
   StatFileData,
@@ -56,5 +58,12 @@ export interface Api {
     /** opens a save dialog; resolves with the written path or null when cancelled */
     exportCsv(name: string): Promise<IpcResult<string | null>>
   }
+  mcp: {
+    get(): Promise<IpcResult<McpState>>
+    /** persists the config and starts/stops/restarts the server accordingly */
+    configure(enabled: boolean, port: number): Promise<IpcResult<McpState>>
+    regenerateToken(): Promise<IpcResult<McpState>>
+  }
   onTransferProgress(cb: (p: TransferProgress) => void): () => void
+  onMcpActivity(cb: (a: McpActivity) => void): () => void
 }

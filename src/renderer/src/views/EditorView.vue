@@ -13,6 +13,7 @@ import ProblemsPanel from '../components/ProblemsPanel.vue'
 import FormulaDialog from '../components/FormulaDialog.vue'
 import { displayToLox } from '../../../shared/time'
 import { LOXONE_EPOCH_OFFSET } from '../../../shared/types'
+import { isCurrentMonth as isCurrentMonthName } from '../../../shared/records'
 import { useEditorStore } from '../stores/editor'
 import { SUFFIX_KEYS } from '../stores/files'
 import { errorText } from '../i18n'
@@ -61,11 +62,7 @@ const suffixText = computed(() => {
   return key ? t(`suffix.${key}`) : t('suffix.output', { n: Number(m[1]) })
 })
 
-const isCurrentMonth = computed(() => {
-  const now = new Date()
-  const cur = `${now.getUTCFullYear()}${String(now.getUTCMonth() + 1).padStart(2, '0')}`
-  return props.filename.slice(-6) === cur
-})
+const isCurrentMonth = computed(() => isCurrentMonthName(props.filename))
 
 const selectedIndices = computed(() => selection.value.map((s) => s.index).sort((a, b) => a - b))
 
@@ -215,6 +212,20 @@ watch(
     <Message v-if="isCurrentMonth" severity="warn" :closable="false">
       <!-- eslint-disable-next-line vue/no-v-html -->
       <span v-html="t('editor.currentMonthWarning')"></span>
+    </Message>
+    <Message
+      v-if="editor.externallyChanged"
+      severity="warn"
+      closable
+      @close="editor.externallyChanged = false"
+    >
+      {{ t('editor.mcpChanged') }}
+      <Button
+        :label="t('editor.mcpReload')"
+        size="small"
+        text
+        @click="editor.load(props.filename)"
+      />
     </Message>
     <Message v-if="editor.error" severity="error" :closable="false">
       {{ errorText(editor.error) }}
